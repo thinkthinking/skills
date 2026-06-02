@@ -1,0 +1,24 @@
+{
+  "name": "thinkthinking-skills",
+  "owner": {
+    "name": "thinkthinking",
+    "url": "https://github.com/thinkthinking"
+  },
+  "metadata": {
+    "description": "changelog skills — fetch, translate, render, and promote Claude Code / OpenAI Codex CLI / OpenAI Codex App release notes",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "changelog",
+      "description": "thinkthinking changelog toolkit — fetch, archive, bilingually translate, and render dark-themed PNG images of the latest Claude Code, OpenAI Codex CLI, and OpenAI Codex App release notes, then optionally draft a Xiaohongshu/rednote post with a 3:4 cover (cover step uses the thinkthinking-image-generation skill, installed separately)",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/claudecode-cli-changelog",
+        "./skills/codex-cli-changelog",
+        "./skills/codex-app-changelog"
+      ]
+    }
+  ]
+}
