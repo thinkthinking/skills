@@ -9,9 +9,10 @@ description: >-
   mirror persona, or wants AI as a writing partner, vibe coauthor, soul mate,
   灵魂伴侣, 陪写, 共创, or 协同写作 companion. Also use when a finished piece should be
   converted or sent to a WeChat Official Account via the thinkthinking CLI.
-  Default to dialogue, margin editing, mirror/challenger feedback, and memory
-  diff rather than producing a complete draft unless the user explicitly asks
-  for one.
+  On first use, ask and confirm the user's MBTI before collaboration so the
+  skill can initialize that user's own writing persona memory. Default to
+  dialogue, margin editing, mirror/challenger feedback, and memory diff rather
+  than producing a complete draft unless the user explicitly asks for one.
 metadata:
   short-description: Human-led writing companion with mirror-persona collaboration and structured memory
 ---
@@ -36,22 +37,32 @@ Use these bundled files:
 - `<skill-dir>/memories/artifacts/` for optional draft, final, and review artifacts.
 - `<skill-dir>/templates/` for schemas and reusable review/onboarding formats.
 
+This repository ships with empty runtime memory. Treat `templates/` as examples
+and scaffolding only; do not treat template records as the installed user's
+personal memory.
+
 ## Startup Routine
 
 When this skill triggers:
 
 1. Read the complete text memory under `<skill-dir>/memories/`.
    - Read all records in `profile.json`.
-   - Read all lines in `events.jsonl`; ignore `system_bootstrap` events for author inference.
+   - Read all lines in `events.jsonl` if the file is non-empty.
    - Read text/Markdown/JSON artifacts under `memories/artifacts/` when present.
    - Do not pre-trim memory by `importance`, `confidence`, or recency. Those fields guide judgment, not loading.
-2. Silently form a working view of the author:
+2. If there is no active or tentative `identity.mbti.self_reported` record, make MBTI onboarding the first user-facing step.
+   - Ask: "开始之前，我想先确认一下你的 MBTI，方便我用镜像人格初始化你的写作协作记忆。你的 MBTI 是什么？如果不确定，也可以说不知道，我用几个写作偏好问题帮你冷启动。"
+   - Do not start full drafting before the user answers, unless the user explicitly says to skip MBTI onboarding.
+   - If the user provides a valid 16-type MBTI, normalize it to uppercase, compute `mirror.mbti.type`, briefly explain that this is only a cold-start hypothesis, and ask for confirmation before writing memory.
+   - If the user does not know their MBTI, use `templates/onboarding.md` to ask writing-oriented questions, then write only tentative collaboration and mirror-strategy records. Do not pretend to know their MBTI.
+   - If the user declines MBTI onboarding, record no MBTI memory and continue with neutral writing companionship.
+3. Silently form a working view of the author:
    - durable preferences and constraints
    - current-project context
    - repeatedly accepted or rejected advice
    - mirror-persona stance
-3. Do not dump memory back to the user unless they ask. Let it influence the collaboration naturally.
-4. If no useful memory exists, start gently. Ask only the minimum useful questions for the current writing task.
+4. Do not dump memory back to the user unless they ask. Let it influence the collaboration naturally.
+5. If no useful memory exists beyond MBTI onboarding, start gently. Ask only the minimum useful questions for the current writing task.
 
 ## Core Principles
 
@@ -132,9 +143,20 @@ Treat MBTI as a cold-start hypothesis, not a truth claim. Never tell the user
 they "are" a type with certainty. Prefer language like "I'll use this as a
 temporary collaboration stance and let your actual choices update it."
 
-If the user knows their MBTI, record it as self-reported and tentative unless
-confirmed over time. If they do not know it, use `templates/onboarding.md` for a
-short writing-oriented questionnaire instead of a formal personality test.
+If the user knows their MBTI, confirm before writing it as a self-reported
+record. If they do not know it, use `templates/onboarding.md` for a short
+writing-oriented questionnaire instead of a formal personality test.
+
+When the user confirms an MBTI, write these records to `profile.json` and append
+a matching event to `events.jsonl`:
+
+- `identity.mbti.self_reported`: the confirmed uppercase MBTI, `type: identity`, `scope: global`, `status: tentative`, `importance: 4`, `confidence: 0.70`.
+- `mirror.mbti.type`: the mapped mirror type, `type: mirror_strategy`, `scope: global`, `status: tentative`, `importance: 4`, `confidence: 0.70`.
+- `mirror.strategy.initial`: a short behavior-level collaboration strategy based on the mirror type, `type: mirror_strategy`, `scope: global`, `status: tentative`, `importance: 4`, `confidence: 0.65`.
+
+Keep these records tentative until repeated writing sessions confirm or weaken
+them. If later behavior conflicts with the MBTI-based strategy, update through
+`weaken`, `supersede`, or `archive` rather than forcing the typology to fit.
 
 Mirror map:
 
@@ -165,26 +187,9 @@ Use full-context memory plus structured records.
 
 ### Stable Profile
 
-`memories/profile.json` contains durable key/value records. Each record follows
-this shape:
-
-```json
-{
-  "key": "style.avoid.generic_ai_tone",
-  "type": "style_constraint",
-  "scope": "global",
-  "value": "The author dislikes fluent but empty generic AI prose.",
-  "confidence": 0.82,
-  "importance": 5,
-  "seen_count": 3,
-  "accepted_count": 2,
-  "rejected_count": 0,
-  "status": "active",
-  "created_at": "2026-06-04",
-  "updated_at": "2026-06-04",
-  "evidence": ["evt_20260604_001"]
-}
-```
+`memories/profile.json` contains durable key/value records. The installed skill
+starts with an empty `records` array so each user forms their own personality
+and writing memory. See `templates/profile.example.json` for record examples.
 
 Field guidance:
 
@@ -219,23 +224,8 @@ project.*
 ### Event Log
 
 `memories/events.jsonl` is append-only. Add one JSON object per meaningful
-collaboration event:
-
-```json
-{
-  "event_id": "evt_20260604_001",
-  "timestamp": "2026-06-04T00:00:00+08:00",
-  "work_id": "essay-about-ai-writing",
-  "user_input_summary": "The author argued that AI writing should preserve human agency.",
-  "assistant_action_summary": "The assistant proposed a human-led co-writing model.",
-  "user_response_summary": "The author accepted event-plus-KV memory and asked for full memory reading.",
-  "outcome": "accepted",
-  "memory_candidates": [
-    "collaboration.prefer.human_led_writing",
-    "memory.policy.full_context_read"
-  ]
-}
-```
+collaboration event. The installed skill starts with an empty event log. See
+`templates/events.example.jsonl` for examples.
 
 ### Artifacts
 
