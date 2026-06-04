@@ -37,6 +37,15 @@ See each `SKILL.md` for the full workflow, flags, and output layout.
 > The optional cover-image step depends on the separate `zenmux-image-generation` skill:
 > `npx skills add ZenMux/skills --skill zenmux-image-generation`
 
+### Writing
+
+Human-led writing workflows that keep the author in charge while the agent acts
+as a conversational editor, mirror, challenger, and memory-bearing collaborator.
+
+| Skill | Use case |
+| --- | --- |
+| [`vibe-writing`](./skills/vibe-writing/SKILL.md) | Human-led AI co-writing with structured memory, MBTI cold-start, mirror-persona feedback, and session review templates |
+
 ## License
 
 [MIT](./LICENSE)

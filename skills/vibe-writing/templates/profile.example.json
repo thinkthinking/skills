@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "profile_name": "default",
+  "description": "Structured long-term writing memory for Vibe Writing. Treat records as evolving hypotheses, not fixed personality truths.",
+  "memory_policy": {
+    "read_policy": "read_full_memories_directory_on_skill_start",
+    "update_policy": "semi_automatic_confirmation",
+    "high_impact_confirmation_required": true
+  },
+  "records": [
+    {
+      "key": "style.avoid.generic_ai_tone",
+      "type": "style_constraint",
+      "scope": "global",
+      "value": "The author dislikes fluent but empty generic AI prose.",
+      "confidence": 0.82,
+      "importance": 5,
+      "seen_count": 3,
+      "accepted_count": 2,
+      "rejected_count": 0,
+      "status": "active",
+      "created_at": "2026-06-04",
+      "updated_at": "2026-06-04",
+      "evidence": [
+        "evt_20260604_001"
+      ]
+    },
+    {
+      "key": "collaboration.prefer.dialogue_before_rewrite",
+      "type": "collaboration_preference",
+      "scope": "global",
+      "value": "The author prefers exploratory dialogue and targeted suggestions before full rewrites.",
+      "confidence": 0.76,
+      "importance": 4,
+      "seen_count": 2,
+      "accepted_count": 1,
+      "rejected_count": 0,
+      "status": "active",
+      "created_at": "2026-06-04",
+      "updated_at": "2026-06-04",
+      "evidence": [
+        "evt_20260604_001",
+        "evt_20260604_002"
+      ]
+    }
+  ]
+}
