@@ -20,5 +20,6 @@ Decision: pending confirmation
 ## Apply Notes
 
 - Ask before applying high-impact memories: MBTI/type claims, long-term personality judgments, strong preferences, taboos, or private facts.
+- Write runtime memories only under `~/.thinkthinking/memories/vibe-writing`, not inside the installed skill directory.
 - For low-risk project context, append the event and update the profile record after briefly telling the user.
 - Prefer `weaken`, `archive`, or `supersede` when evidence conflicts with an older record.

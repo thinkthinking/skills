@@ -1,7 +1,7 @@
 # Vibe Writing Onboarding
 
 Use this at the beginning of the first Vibe Writing session, before substantial
-collaboration, when `memories/profile.json` has no active or tentative
+collaboration, when `~/.thinkthinking/memories/vibe-writing/profile.json` has no active or tentative
 `identity.mbti.self_reported` record. The goal is to initialize the installed
 user's own writing persona memory, not to create a fixed personality verdict.
 
@@ -38,7 +38,7 @@ Do not write MBTI memory if the user does not confirm.
 ## If The User Already Knows Their MBTI But Wants To Skip Memory
 
 Use the MBTI only for the current session and do not write `profile.json` or
-`events.jsonl`.
+`events.jsonl` under `~/.thinkthinking/memories/vibe-writing`.
 
 ## If The User Does Not Know Their MBTI
 

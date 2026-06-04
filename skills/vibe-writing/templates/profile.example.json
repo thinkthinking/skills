@@ -3,7 +3,8 @@
   "profile_name": "default",
   "description": "Structured long-term writing memory for Vibe Writing. Treat records as evolving hypotheses, not fixed personality truths.",
   "memory_policy": {
-    "read_policy": "read_full_memories_directory_on_skill_start",
+    "read_policy": "read_full_user_memory_directory_on_skill_start",
+    "memory_dir": "~/.thinkthinking/memories/vibe-writing",
     "update_policy": "semi_automatic_confirmation",
     "high_impact_confirmation_required": true
   },

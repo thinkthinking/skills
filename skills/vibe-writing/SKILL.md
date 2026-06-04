@@ -14,7 +14,7 @@ description: >-
   dialogue, margin editing, mirror/challenger feedback, and memory diff rather
   than producing a complete draft unless the user explicitly asks for one.
 metadata:
-  short-description: Human-led writing companion with mirror-persona collaboration and structured memory
+  short-description: Human-led writing companion with mirror-persona collaboration and user-level memory
 ---
 
 # Vibe Writing
@@ -29,40 +29,61 @@ pressure-testing, evidence, structure, and memory.
 
 This skill can be installed in different locations. In this document,
 `<skill-dir>` means the directory containing this `SKILL.md`.
+`<memory-dir>` means the user's runtime memory directory:
 
-Use these bundled files:
+```text
+~/.thinkthinking/memories/vibe-writing
+```
 
-- `<skill-dir>/memories/profile.json` for stable structured writing memory.
-- `<skill-dir>/memories/events.jsonl` for append-only collaboration events.
-- `<skill-dir>/memories/artifacts/` for optional draft, final, and review artifacts.
-- `<skill-dir>/templates/` for schemas and reusable review/onboarding formats.
+Runtime memory lives under `<memory-dir>`, not under `<skill-dir>`, so skill
+updates do not overwrite a user's writing persona. Use these runtime files:
 
-This repository ships with empty runtime memory. Treat `templates/` as examples
-and scaffolding only; do not treat template records as the installed user's
-personal memory.
+- `<memory-dir>/profile.json` for stable structured writing memory.
+- `<memory-dir>/events.jsonl` for append-only collaboration events.
+- `<memory-dir>/artifacts/` for optional draft, final, and review artifacts.
+
+Use `<skill-dir>/templates/` only for schemas, examples, and onboarding/review
+scaffolding. Do not treat template records as the installed user's personal
+memory.
+
+If `<memory-dir>` or its files do not exist, initialize them before writing:
+
+```bash
+mkdir -p ~/.thinkthinking/memories/vibe-writing/artifacts
+```
+
+Create `<memory-dir>/profile.json` from `templates/profile.blank.json`, and
+create an empty `<memory-dir>/events.jsonl` if it is missing.
+
+If an older installation has memory under `<skill-dir>/memories/`, do not keep
+writing there. Ask the user whether to migrate those records into
+`<memory-dir>` before continuing.
 
 ## Startup Routine
 
 When this skill triggers:
 
-1. Read the complete text memory under `<skill-dir>/memories/`.
+1. Resolve and initialize `<memory-dir>` at `~/.thinkthinking/memories/vibe-writing`.
+   - Create the directory and missing blank files if file tools are available.
+   - If file tools are unavailable, explain the expected memory path and continue without pretending memory was persisted.
+2. Read the complete text memory under `<memory-dir>`.
    - Read all records in `profile.json`.
    - Read all lines in `events.jsonl` if the file is non-empty.
-   - Read text/Markdown/JSON artifacts under `memories/artifacts/` when present.
+   - Read text/Markdown/JSON artifacts under `artifacts/` when present.
    - Do not pre-trim memory by `importance`, `confidence`, or recency. Those fields guide judgment, not loading.
-2. If there is no active or tentative `identity.mbti.self_reported` record, make MBTI onboarding the first user-facing step.
+3. If there is no active or tentative `identity.mbti.self_reported` record, make MBTI onboarding the first user-facing step.
    - Ask: "开始之前，我想先确认一下你的 MBTI，方便我用镜像人格初始化你的写作协作记忆。你的 MBTI 是什么？如果不确定，也可以说不知道，我用几个写作偏好问题帮你冷启动。"
    - Do not start full drafting before the user answers, unless the user explicitly says to skip MBTI onboarding.
    - If the user provides a valid 16-type MBTI, normalize it to uppercase, compute `mirror.mbti.type`, briefly explain that this is only a cold-start hypothesis, and ask for confirmation before writing memory.
    - If the user does not know their MBTI, use `templates/onboarding.md` to ask writing-oriented questions, then write only tentative collaboration and mirror-strategy records. Do not pretend to know their MBTI.
    - If the user declines MBTI onboarding, record no MBTI memory and continue with neutral writing companionship.
-3. Silently form a working view of the author:
+4. Silently form a working view of the author:
    - durable preferences and constraints
    - current-project context
    - repeatedly accepted or rejected advice
    - mirror-persona stance
-4. Do not dump memory back to the user unless they ask. Let it influence the collaboration naturally.
-5. If no useful memory exists beyond MBTI onboarding, start gently. Ask only the minimum useful questions for the current writing task.
+5. Do not dump memory back to the user unless they ask. Let it influence the collaboration naturally.
+6. If no useful memory exists beyond MBTI onboarding, start gently. Ask only the minimum useful questions for the current writing task.
 
 ## Core Principles
 
@@ -147,8 +168,8 @@ If the user knows their MBTI, confirm before writing it as a self-reported
 record. If they do not know it, use `templates/onboarding.md` for a short
 writing-oriented questionnaire instead of a formal personality test.
 
-When the user confirms an MBTI, write these records to `profile.json` and append
-a matching event to `events.jsonl`:
+When the user confirms an MBTI, write these records to `<memory-dir>/profile.json`
+and append a matching event to `<memory-dir>/events.jsonl`:
 
 - `identity.mbti.self_reported`: the confirmed uppercase MBTI, `type: identity`, `scope: global`, `status: tentative`, `importance: 4`, `confidence: 0.70`.
 - `mirror.mbti.type`: the mapped mirror type, `type: mirror_strategy`, `scope: global`, `status: tentative`, `importance: 4`, `confidence: 0.70`.
@@ -187,9 +208,10 @@ Use full-context memory plus structured records.
 
 ### Stable Profile
 
-`memories/profile.json` contains durable key/value records. The installed skill
-starts with an empty `records` array so each user forms their own personality
-and writing memory. See `templates/profile.example.json` for record examples.
+`<memory-dir>/profile.json` contains durable key/value records. It starts with
+an empty `records` array so each user forms their own personality and writing
+memory. See `templates/profile.blank.json` for the initial file and
+`templates/profile.example.json` for record examples.
 
 Field guidance:
 
@@ -223,13 +245,13 @@ project.*
 
 ### Event Log
 
-`memories/events.jsonl` is append-only. Add one JSON object per meaningful
-collaboration event. The installed skill starts with an empty event log. See
+`<memory-dir>/events.jsonl` is append-only. Add one JSON object per meaningful
+collaboration event. It starts as an empty file. See
 `templates/events.example.jsonl` for examples.
 
 ### Artifacts
 
-Use `memories/artifacts/` for optional text artifacts:
+Use `<memory-dir>/artifacts/` for optional text artifacts:
 
 - `YYYY-MM-DD-<slug>-draft.md`
 - `YYYY-MM-DD-<slug>-final.md`
@@ -266,8 +288,9 @@ Confirmation policy:
 
 When modifying memory files:
 
-- Keep `profile.json` valid JSON.
-- Append valid single-line JSON objects to `events.jsonl`.
+- Only write runtime memory under `<memory-dir>`, never under `<skill-dir>`.
+- Keep `<memory-dir>/profile.json` valid JSON.
+- Append valid single-line JSON objects to `<memory-dir>/events.jsonl`.
 - Preserve old evidence instead of rewriting history.
 - Prefer `weaken`, `archive`, or `supersede` over destructive deletion.
 
