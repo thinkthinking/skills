@@ -5,7 +5,7 @@
     "url": "https://github.com/thinkthinking"
   },
   "metadata": {
-    "description": "changelog skills — fetch, translate, render, and promote Claude Code / OpenAI Codex CLI / OpenAI Codex App release notes",
+    "description": "thinkthinking skills — changelog toolkit (fetch, translate, render Claude Code / Codex CLI / Codex App release notes) and vibe-creation (human-led AI co-writing companion)",
     "version": "1.0.0"
   },
   "plugins": [
@@ -18,6 +18,15 @@
         "./skills/claudecode-cli-changelog",
         "./skills/codex-cli-changelog",
         "./skills/codex-app-changelog"
+      ]
+    },
+    {
+      "name": "vibe-creation",
+      "description": "Human-led AI co-writing and creative companion — collaborative writing, editing, and content creation with mirror-persona feedback, structured memory, and WeChat publishing support",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/vibe-writing"
       ]
     }
   ]
