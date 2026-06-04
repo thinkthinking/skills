@@ -44,7 +44,7 @@ as a conversational editor, mirror, challenger, and memory-bearing collaborator.
 
 | Skill | Use case |
 | --- | --- |
-| [`vibe-writing`](./skills/vibe-writing/SKILL.md) | Human-led AI co-writing with structured memory, MBTI cold-start, mirror-persona feedback, and session review templates |
+| [`vibe-writing`](./skills/vibe-writing/SKILL.md) | Human-led AI co-writing with user-level memory, MBTI cold-start, mirror-persona feedback, and project-local outputs under `results/vibe-writing` |
 
 ## License
 
