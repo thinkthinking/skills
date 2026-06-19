@@ -37,14 +37,16 @@ See each `SKILL.md` for the full workflow, flags, and output layout.
 > The optional cover-image step depends on the separate `zenmux-image-generation` skill:
 > `npx skills add ZenMux/skills --skill zenmux-image-generation`
 
-### Writing
+### Vibe creation
 
-Human-led writing workflows that keep the author in charge while the agent acts
-as a conversational editor, mirror, challenger, and memory-bearing collaborator.
+Human-led workflows that keep the human in charge while the agent acts as a
+sharp, opinionated thinking partner — conversational, challenging, and
+memory-bearing rather than a generic generator.
 
 | Skill | Use case |
 | --- | --- |
 | [`vibe-writing`](./skills/vibe-writing/SKILL.md) | Human-led AI co-writing with user-level memory, MBTI cold-start, mirror-persona feedback, and project-local outputs under `results/vibe-writing` |
+| [`vibe-product-design`](./skills/vibe-product-design/SKILL.md) | Super product-manager thinking partner that maps a product's complete picture with no gaps — go 0→1 from a raw idea or audit an existing design for what's missing, thin, unvalidated, or contradictory; outputs a living brief + coverage map under `.context/requirements/vibe-product-design` |
 
 ## License
 

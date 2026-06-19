@@ -22,11 +22,12 @@
     },
     {
       "name": "vibe-creation",
-      "description": "Human-led AI co-writing and creative companion — collaborative writing, editing, and content creation with mirror-persona feedback, structured memory, and WeChat publishing support",
+      "description": "Human-led AI co-creation companions — collaborative writing with mirror-persona feedback and WeChat publishing, plus a super product-manager partner that maps a product's complete picture (0→1 or audit) with no gaps",
       "source": "./",
       "strict": false,
       "skills": [
-        "./skills/vibe-writing"
+        "./skills/vibe-writing",
+        "./skills/vibe-product-design"
       ]
     }
   ]
