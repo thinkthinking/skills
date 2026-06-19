@@ -7,12 +7,14 @@
 它会：
   1. 按章节序号(00→05)、再按续写段序号(主文件→.part2→.part3…)排序所有分章文件；
   2. 去掉每个续写段开头的 `<!-- 续写自 ... -->` 标记行；
-  3. 拼成一份带「文档信息 + 自动生成目录」的 PRD.md，输出到同一目录。
+  3. 若存在 `_changelog.md`，把它作为「变更记录」表嵌入 PRD 开头（标题之后、目录之前）；
+  4. 拼成一份带「文档信息 + 变更记录 + 自动生成目录」的 PRD.md，输出到同一目录。
 
 分章文件命名约定（与 SKILL.md 一致）：
     00-产品概述.md   01-需求分析.md   02-商业画布.md
     03-用户旅程.md   04-业务流程.md   05-功能设计.md
 续写段：在主文件名后加 .partN，例如 05-功能设计.part2.md
+变更记录：`_changelog.md`（下划线开头，不计为章节；内容为一张 Markdown 变更表）。
 """
 import argparse
 import datetime
@@ -59,6 +61,14 @@ def read_body(path: Path) -> str:
     return text
 
 
+def read_changelog(src: Path) -> str:
+    """读取 _changelog.md 正文（去掉首尾空行）；不存在返回空串。"""
+    p = src / "_changelog.md"
+    if not p.is_file():
+        return ""
+    return p.read_text(encoding="utf-8").strip("\n")
+
+
 def first_heading(body: str, fallback: str) -> str:
     """取正文里第一个 # 标题作为目录条目，没有就用 fallback。"""
     for ln in body.splitlines():
@@ -83,11 +93,10 @@ def main():
     if not files:
         sys.exit(f"在 {src} 没找到符合命名规范的分章文件（如 00-产品概述.md）。")
 
-    # 按章节聚合（同一章节的多个 part 顺序拼接）
-    chapters = []  # [(num, [bodies...])]
+    # 按章节聚合（同一章节的多个 part 顺序拼接；files 已按 (num, part) 排序）
     seen_nums = []
     by_num = {}
-    for num, part, path in files:
+    for num, _part, path in files:
         body = read_body(path)
         by_num.setdefault(num, []).append(body)
         if num not in seen_nums:
@@ -95,6 +104,7 @@ def main():
 
     today = datetime.date.today().isoformat()
     title = args.title or src.name
+    changelog = read_changelog(src)
     present = [n for n in seen_nums]
     missing = [n for n in CHAPTER_NAMES if n not in present]
 
@@ -113,6 +123,8 @@ def main():
     if missing:
         miss_str = "、".join(f"{n} {CHAPTER_NAMES[n]}" for n in missing)
         parts.append(f"> ⚠️ 注意：以下章节尚未产出，PRD 暂不完整：{miss_str}\n")
+    if changelog:
+        parts.append(changelog + "\n")
     parts.append("## 目录\n")
     parts.append("\n".join(toc_lines) + "\n")
     parts.append("\n---\n")
