@@ -198,9 +198,23 @@ ls -a <project-dir>/.context/requirements/vibe-product-design/ 2>/dev/null
 python3 <skill-dir>/scripts/merge_prd.py <project-dir>/.context/requirements/vibe-product-design/
 ```
 
-脚本会按章节序号（及 part 序号）把分章文件拼成一份带目录的 `PRD.md`，并把 `_changelog.md` 的变更
-记录表嵌在开头，输出在同一目录下。完成后告诉用户最终 PRD 的路径、本次版本号与关键改动，并简要说明
-它包含哪几章。这份 `PRD.md` 就是呈现给用户的、清晰完整的最终成果。
+脚本会：先用 **mdformat** 把每个分章文件（含 `_changelog.md`）就地规范化，再按章节序号（及 part
+序号）拼成一份带目录的 `PRD.md`、把变更记录表嵌在开头，最后对整份 PRD 再过一遍 mdformat，输出在同一
+目录下。完成后告诉用户最终 PRD 的路径、本次版本号与关键改动，并简要说明它包含哪几章。这份 `PRD.md`
+就是呈现给用户的、清晰完整、且**格式合规**的最终成果。
+
+**Markdown 规范化（mdformat）** —— 脚本依赖 [mdformat](https://github.com/hukkin/mdformat)（CommonMark +
+GFM 表格）自动修正格式：标题前后空行、列表缩进、表格对齐、去行尾空白、合并多余空行、文件末尾单换行
+等。它**保证格式化不改变渲染结果**，Mermaid 等代码块内容、`[假设]` 标记、续写注释都原样保留。
+
+- 若环境未安装，先装一次（合并前）：
+
+  ```bash
+  pip install mdformat mdformat-gfm
+  ```
+
+- 未安装时脚本会**跳过规范化并提示**，合并照常完成——但应尽量装上以保证产物格式合规。
+- 调试或不想改动分章文件时，可加 `--no-lint` 跳过规范化。
 
 ## 联网核实（拿不准就搜，别凭记忆）
 
@@ -236,6 +250,9 @@ PRD 的可信度取决于事实的准确度。**只要某个外部事实你不�
 技术复杂度评级、Mermaid 图（架构/泳道/旅程）、精益画布画法。**精益画布等用 Mermaid 或 Markdown 表格，
 不要画 SVG。**
 
+写的时候**用规范的 Markdown**（标题前后留空行、表格用标准 `| --- |` 语法、代码块用三反引号围栏），
+最终细节交给合并脚本里的 mdformat 统一规范化——你不必手抠对齐，但结构要写对。
+
 ## 不要做的事
 
 - 不要给用户看内部脚手架（覆盖度地图、决策日志、状态仪表盘）——最终只交付一份 PRD。
@@ -247,4 +264,6 @@ PRD 的可信度取决于事实的准确度。**只要某个外部事实你不�
 - 不要跳过第 0 步：动手前先查产出目录有没有已有 PRD，有就在其上改、别推倒重写。
 - 不要漏掉变更记录：每次产出/修改都要更新 `_changelog.md`（日期、版本+1、维护人、关键改动），
   且要在跑合并脚本之前就位。
+- 不要自己手写 Markdown lint 规则去抠格式——规范化交给合并脚本里的 mdformat；缺它就 `pip install
+  mdformat mdformat-gfm`，别绕过。
 - 不要自创流程或章节；严格按这六章和四步走。
