@@ -25,7 +25,20 @@ For Codex App changelog entries from OpenAI Developers, use `$codex-app-changelo
 
 This skill can be installed into different agent directories, so **its absolute location is not fixed** — do not assume a project-root path or any specific install prefix.
 
-Throughout this document, `<skill-dir>` means **the directory that contains this SKILL.md** (the installed `codex-cli-changelog/` folder). Resolve every relative path below against `<skill-dir>`, not against the current working directory. The bundled Python scripts self-locate — they find their own `scripts/`, `changelogs/`, and `assets/` siblings regardless of where the skill was installed — so as long as you invoke the correct script path, every output file lands in the right place automatically.
+Throughout this document, `<skill-dir>` means **the directory that contains this SKILL.md** (the installed `codex-cli-changelog/` folder). `<project-dir>` means the user's current project root: prefer `git rev-parse --show-toplevel`, otherwise use the current working directory.
+
+Resolve bundled scripts and logo assets against `<skill-dir>`, but write runtime outputs under the user's project:
+
+```text
+<project-dir>/.context/codex-cli-changelog/
+├── changelogs/
+├── rednotes/
+└── assets/
+    ├── rendered/
+    └── covers/
+```
+
+The bundled TypeScript scripts self-locate for code, then default to `<project-dir>/.context/codex-cli-changelog/...` for generated files based on the shell's current project. If you run a script from outside the intended project, pass `--output-dir` or `--output` explicitly. These runtime scripts create `<project-dir>/.context/codex-cli-changelog/.gitignore` on first write; this source skill repository must not contain a checked-in `.context/` directory.
 
 The cover step (Step 6) depends on a separate skill, **`zenmux-image-generation`**. If it is not installed, install it before running that step:
 
@@ -41,7 +54,7 @@ npx skills add ZenMux/skills --skill zenmux-image-generation
 
 GitHub's latest-release endpoint returns the latest published full release, not drafts or prereleases. Still apply this skill's extra filters because the Codex repo may also publish dependency/tooling releases, prerelease-like names, or GitHub-generated PR rollups.
 
-This skill intentionally uses `gh` only. Do not fall back to `curl`, `WebFetch`, browser scraping, or a direct Python HTTP client. If `gh` auth is missing or expired, stop and ask the user to run `gh auth login -h github.com` or provide `GH_TOKEN`.
+This skill intentionally uses `gh` only. Do not fall back to `curl`, `WebFetch`, browser scraping, or a direct HTTP client. If `gh` auth is missing or expired, stop and ask the user to run `gh auth login -h github.com` or provide `GH_TOKEN`.
 
 ## Hard Rules
 
@@ -60,26 +73,26 @@ This skill intentionally uses `gh` only. Do not fall back to `curl`, `WebFetch`,
 Prefer the helper script. It invokes `gh api` as the only GitHub access path, tries `/releases/latest`, then scans recent releases with `gh api` if the latest body is unusable because it is empty, dependency-only, prerelease-like by name, or only GitHub-generated PR notes. Always run this upstream check first so the workflow knows the current latest usable version before deciding whether local artifacts are duplicates.
 
 ```bash
-uv run python <skill-dir>/scripts/fetch_latest_release.py --json
-uv run python <skill-dir>/scripts/fetch_latest_release.py --save
+npx --yes tsx <skill-dir>/scripts/fetch_latest_release.ts --json
+npx --yes tsx <skill-dir>/scripts/fetch_latest_release.ts --save
 ```
 
 Default output for `--save`:
 
 ```
-<skill-dir>/changelogs/<version>.md
+<project-dir>/.context/codex-cli-changelog/changelogs/<version>.md
 ```
 
 Use `--max-pages <N>` if the recent release list is unusually noisy. Use `--allow-generated` only if the user explicitly asks to keep PR-generated notes.
 
-The `--json` output includes `existing_local_path` and `archive_status` when `changelogs/<version>.md` already exists. Treat `archive_status: "unchanged"` as the duplicate check result: reuse the local markdown and continue only with missing downstream artifacts.
+The `--json` output includes `existing_local_path` and `archive_status` when `.context/codex-cli-changelog/changelogs/<version>.md` already exists. Treat `archive_status: "unchanged"` as the duplicate check result: reuse the local markdown and continue only with missing downstream artifacts.
 
 If `gh` authentication is missing or expired, do not switch tools. Ask the user to authenticate:
 
 ```bash
 gh auth login -h github.com
 # or
-GH_TOKEN=<token> uv run python <skill-dir>/scripts/fetch_latest_release.py --save
+GH_TOKEN=<token> npx --yes tsx <skill-dir>/scripts/fetch_latest_release.ts --save
 ```
 
 ### 2. Save English copy
@@ -106,7 +119,7 @@ If the helper output still says `# Codex <version>` because it came from an olde
 
 ### 3. Produce Chinese translation
 
-Write to `changelogs/<version>.zh.md`:
+Write to `<project-dir>/.context/codex-cli-changelog/changelogs/<version>.zh.md`:
 
 ```markdown
 ---
@@ -123,7 +136,7 @@ language: zh-CN
 <translated release body>
 ```
 
-If `changelogs/<version>.zh.md` already exists for the latest version, reuse it and skip translation unless the English archive changed or the user asks for a retranslation.
+If `.context/codex-cli-changelog/changelogs/<version>.zh.md` already exists for the latest version, reuse it and skip translation unless the English archive changed or the user asks for a retranslation.
 
 Translation rules:
 
@@ -142,35 +155,35 @@ Run the renderer twice — once per language — and dispatch the two calls in p
 
 ```bash
 # Chinese
-uv run --with playwright --with markdown \
-  <skill-dir>/scripts/render_changelog.py \
-  --input <skill-dir>/changelogs/<version>.zh.md
+npx --yes tsx \
+  <skill-dir>/scripts/render_changelog.ts \
+  --input <project-dir>/.context/codex-cli-changelog/changelogs/<version>.zh.md
 
 # English
-uv run --with playwright --with markdown \
-  <skill-dir>/scripts/render_changelog.py \
-  --input <skill-dir>/changelogs/<version>.md
+npx --yes tsx \
+  <skill-dir>/scripts/render_changelog.ts \
+  --input <project-dir>/.context/codex-cli-changelog/changelogs/<version>.md
 ```
 
 Outputs:
 
-- `assets/rendered/<version>.zh.png` — Chinese, retina 2x, ~1600px (becomes 图2 in the rednote)
-- `assets/rendered/<version>.png` — English, retina 2x, ~1600px (becomes 图3 in the rednote)
+- `.context/codex-cli-changelog/assets/rendered/<version>.zh.png` — Chinese, retina 2x, ~1600px (becomes 图2 in the rednote)
+- `.context/codex-cli-changelog/assets/rendered/<version>.png` — English, retina 2x, ~1600px (becomes 图3 in the rednote)
 
-If `assets/rendered/<version>.zh.png` and `assets/rendered/<version>.png` already exist for the latest version, skip rendering. If only one image exists, render only the missing language. The renderer strips YAML frontmatter, removes `（中文版）` / `(中文版)` from the image title, converts markdown to HTML, and screenshots it with a dark theme.
+If `.context/codex-cli-changelog/assets/rendered/<version>.zh.png` and `.context/codex-cli-changelog/assets/rendered/<version>.png` already exist for the latest version, skip rendering. If only one image exists, render only the missing language. The renderer strips YAML frontmatter, removes `（中文版）` / `(中文版)` from the image title, converts markdown to HTML, and screenshots it with a dark theme.
 
 First-time setup requires Chromium:
 
 ```bash
-uv run --with playwright python -m playwright install chromium
+npx --yes --package playwright playwright install chromium
 ```
 
 ### 5. Optional Xiaohongshu post
 
-When the user asks for a rednote / 小红书 post about the update, create a short post directly from the curated Codex CLI changelog content. The output goes inside this skill's folder:
+When the user asks for a rednote / 小红书 post about the update, create a short post directly from the curated Codex CLI changelog content. The output goes under the current project's context folder:
 
 ```
-rednotes/codex-cli-<version>.md
+<project-dir>/.context/codex-cli-changelog/rednotes/codex-cli-<version>.md
 ```
 
 The body should be extremely short:
@@ -192,9 +205,9 @@ Codex CLI <version> 这版主要修了 <one key user-facing or architecture-faci
 
 The Xiaohongshu post is laid out as:
 
-- 图1 -> cover generated via `$zenmux-image-generation` (prefer `assets/covers/<version>/<generated-or-returned-filename>.png` when bundling assets here)
-- 图2 -> rendered Chinese changelog (`assets/rendered/<version>.zh.png`)
-- 图3 -> rendered English changelog (`assets/rendered/<version>.png`)
+- 图1 -> cover generated via `$zenmux-image-generation` (prefer `.context/codex-cli-changelog/assets/covers/<version>/<generated-or-returned-filename>.png` when bundling assets here)
+- 图2 -> rendered Chinese changelog (`.context/codex-cli-changelog/assets/rendered/<version>.zh.png`)
+- 图3 -> rendered English changelog (`.context/codex-cli-changelog/assets/rendered/<version>.png`)
 
 Both rendered images are produced in Step 4, so the reference line is always accurate. Do not omit or paraphrase it.
 
@@ -225,7 +238,7 @@ Changelog-specific handoff brief:
 - Optimization requirement: after drafting the four concept briefs, hand them to `$zenmux-image-generation` and let that skill optimize each prompt using its current cookbook, model-selection, confirmation, and API workflow. This changelog skill should not hand-write final API prompts when `$zenmux-image-generation` can optimize them.
 - Batch requirement: generate 4 sequential concept batches, 2 candidates per concept with `-n 2`, for 8 total candidates. Do not merge concepts into a grid or ask for all concepts inside one image.
 - Execution note: use `1024x1536` with `quality=high` for the default OpenAI Codex CLI rednote cover. Run the 4 concept batches sequentially with `-n 2` each, or use distinct output folders per concept if the image-generation skill supports that. Avoid parallel same-folder runs because timestamp-based filenames can collide.
-- Output preference: save or place final cover assets under `<skill-dir>/assets/covers/<version>/<concept-slug>/` when bundling the rednote assets.
+- Output preference: save or place final cover assets under `<project-dir>/.context/codex-cli-changelog/assets/covers/<version>/<concept-slug>/` when bundling the rednote assets.
 - After generation: report the output paths only. Do not rank, select, or recommend a final 图1 unless the user explicitly asks.
 - Avoid: emoji, fake GitHub screenshots, stock-photo people, malformed words, watermarks, invented logos, bland gradient backgrounds, busy small text, and multi-variant grids inside a single image.
 
@@ -242,25 +255,29 @@ Output a short summary: version, source release URL, saved file paths, rendered 
 
 ## Output locations
 
-All paths below are relative to `<skill-dir>` (the installed `codex-cli-changelog/` folder; its absolute prefix varies by agent).
+Bundled code/assets live under `<skill-dir>`; generated runtime output lives under `<project-dir>/.context/codex-cli-changelog/`.
 
 ```
 <skill-dir>/
 ├── SKILL.md
 ├── scripts/
-│   ├── fetch_latest_release.py             # GitHub releases -> curated markdown
-│   └── render_changelog.py                 # Markdown -> dark-themed PNG
+│   ├── fetch_latest_release.ts             # GitHub releases -> curated markdown
+│   └── render_changelog.ts                 # Markdown -> dark-themed PNG
+└── assets/
+    └── openai.png                          # Bundled OpenAI logo reference for cover handoff
+
+<project-dir>/.context/codex-cli-changelog/
+├── .gitignore                              # Runtime-created; ignores generated image/media files
 ├── assets/
-│   ├── openai.png                          # Bundled OpenAI logo reference for cover handoff
-│   ├── covers/
+│   ├── rendered/
+│   │   ├── <version>.zh.png
+│   │   └── <version>.png
+│   └── covers/
 │   │   └── <version>/
 │   │       ├── concept-01-<content-derived-slug>/
 │   │       ├── concept-02-<content-derived-slug>/
 │   │       ├── concept-03-<content-derived-slug>/
 │   │       └── concept-04-<content-derived-slug>/
-│   └── rendered/
-│       ├── <version>.zh.png
-│       └── <version>.png
 ├── changelogs/
 │   ├── <version>.md
 │   └── <version>.zh.md
@@ -269,4 +286,4 @@ All paths below are relative to `<skill-dir>` (the installed `codex-cli-changelo
 ```
 
 Files are version-named so re-running the skill for the same release is idempotent.
-Generated image folders (`assets/rendered/` and `assets/covers/`) are gitignored because they are reproducible local/social assets and can become large.
+Generated image folders (`assets/rendered/` and `assets/covers/`) are gitignored inside `.context/codex-cli-changelog/` because they are reproducible local/social assets and can become large.

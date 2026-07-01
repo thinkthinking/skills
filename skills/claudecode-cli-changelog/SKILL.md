@@ -21,7 +21,20 @@ End-to-end workflow: pull the latest Claude Code CHANGELOG entry, archive it bil
 
 This skill can be installed into different agent directories, so **its absolute location is not fixed** — do not assume a project-root path or any specific install prefix.
 
-Throughout this document, `<skill-dir>` means **the directory that contains this SKILL.md** (the installed `claudecode-cli-changelog/` folder). Resolve every relative path below against `<skill-dir>`, not against the current working directory. The bundled Python scripts self-locate — they find their own `scripts/`, `changelogs/`, and `assets/` siblings regardless of where the skill was installed — so as long as you invoke the correct script path, every output file lands in the right place automatically.
+Throughout this document, `<skill-dir>` means **the directory that contains this SKILL.md** (the installed `claudecode-cli-changelog/` folder). `<project-dir>` means the user's current project root: prefer `git rev-parse --show-toplevel`, otherwise use the current working directory.
+
+Resolve bundled scripts and logo assets against `<skill-dir>`, but write runtime outputs under the user's project:
+
+```text
+<project-dir>/.context/claudecode-cli-changelog/
+├── changelogs/
+├── rednotes/
+└── assets/
+    ├── rendered/
+    └── covers/
+```
+
+The bundled TypeScript scripts self-locate for code, then default to `<project-dir>/.context/claudecode-cli-changelog/...` for generated files based on the shell's current project. If you run a script from outside the intended project, pass `--changelog-dir` or `--output` explicitly. These runtime scripts create `<project-dir>/.context/claudecode-cli-changelog/.gitignore` on first write; this source skill repository must not contain a checked-in `.context/` directory.
 
 The cover step (Step 7) depends on a separate skill, **`zenmux-image-generation`**. If it is not installed, install it before running that step:
 
@@ -60,14 +73,14 @@ When the latest version is a tiny hotfix, check the version immediately below it
 After deciding the exact `<version>` or merged `<version-a>-<version-b>` bundle, check for an existing English archive for that selected version:
 
 ```bash
-uv run python <skill-dir>/scripts/find_existing_changelog.py --version <version> --json
+npx --yes tsx <skill-dir>/scripts/find_existing_changelog.ts --version <version> --json
 ```
 
 If this reports `"reused_local": true`, treat the local file as the duplicate check result: skip saving the English markdown and continue only with missing downstream artifacts. This check happens **after** fetching and extracting the latest upstream entry, never before.
 
 ### 3. Save English copy
 
-Write to `changelogs/<version>.md`:
+Write to `<project-dir>/.context/claudecode-cli-changelog/changelogs/<version>.md`:
 
 ```markdown
 ---
@@ -86,7 +99,7 @@ If the selected version's English archive already exists and the fetched body ma
 
 ### 4. Produce Chinese translation
 
-Write to `changelogs/<version>.zh.md`:
+Write to `<project-dir>/.context/claudecode-cli-changelog/changelogs/<version>.zh.md`:
 
 ```markdown
 ---
@@ -101,7 +114,7 @@ language: zh-CN
 <translated bullets>
 ```
 
-If `changelogs/<version>.zh.md` already exists for the selected latest version or merged bundle, reuse it and skip translation unless the English archive changed or the user asks for a retranslation.
+If `.context/claudecode-cli-changelog/changelogs/<version>.zh.md` already exists for the selected latest version or merged bundle, reuse it and skip translation unless the English archive changed or the user asks for a retranslation.
 
 **Translation rules:**
 
@@ -120,22 +133,22 @@ Run the renderer twice — once per language — and dispatch the two calls in p
 
 ```bash
 # Chinese
-uv run --with playwright --with markdown \
-  <skill-dir>/scripts/render_changelog.py \
-  --input <skill-dir>/changelogs/<version>.zh.md
+npx --yes tsx \
+  <skill-dir>/scripts/render_changelog.ts \
+  --input <project-dir>/.context/claudecode-cli-changelog/changelogs/<version>.zh.md
 
 # English (upstream verbatim)
-uv run --with playwright --with markdown \
-  <skill-dir>/scripts/render_changelog.py \
-  --input <skill-dir>/changelogs/<version>.md
+npx --yes tsx \
+  <skill-dir>/scripts/render_changelog.ts \
+  --input <project-dir>/.context/claudecode-cli-changelog/changelogs/<version>.md
 ```
 
 Outputs:
 
-- `assets/rendered/<version>.zh.png` — Chinese, retina 2x, ~1600px (becomes 图2 in the rednote)
-- `assets/rendered/<version>.png` — English, retina 2x, ~1600px (becomes 图3 in the rednote)
+- `.context/claudecode-cli-changelog/assets/rendered/<version>.zh.png` — Chinese, retina 2x, ~1600px (becomes 图2 in the rednote)
+- `.context/claudecode-cli-changelog/assets/rendered/<version>.png` — English, retina 2x, ~1600px (becomes 图3 in the rednote)
 
-If `assets/rendered/<version>.zh.png` and `assets/rendered/<version>.png` already exist for the selected version or merged bundle, skip rendering. If only one image exists, render only the missing language.
+If `.context/claudecode-cli-changelog/assets/rendered/<version>.zh.png` and `.context/claudecode-cli-changelog/assets/rendered/<version>.png` already exist for the selected version or merged bundle, skip rendering. If only one image exists, render only the missing language.
 
 The renderer:
 
@@ -147,7 +160,7 @@ The renderer:
 First-time setup requires Chromium:
 
 ```bash
-uv run --with playwright python -m playwright install chromium
+npx --yes --package playwright playwright install chromium
 ```
 
 Optional flags:
@@ -158,10 +171,10 @@ Optional flags:
 
 ### 6. (Optional) Draft a Xiaohongshu post
 
-When the user asks for a rednote / 小红书 post about the update, create a short post directly from the changelog content. **The output goes inside this skill's folder**, not in rednote-generator's own published dir:
+When the user asks for a rednote / 小红书 post about the update, create a short post directly from the changelog content. **The output goes under the current project's context folder**, not in rednote-generator's own published dir:
 
 ```
-rednotes/claude-code-<version>.md
+<project-dir>/.context/claudecode-cli-changelog/rednotes/claude-code-<version>.md
 ```
 
 The body should be extremely short:
@@ -183,9 +196,9 @@ Claude Code <version> 这版主要修了 <one key user-facing or architecture-fa
 
 The Xiaohongshu post is laid out as:
 
-- 图1 → cover generated via `$zenmux-image-generation` (prefer `assets/covers/<version>/<generated-or-returned-filename>.png` when bundling assets here)
-- 图2 → rendered Chinese changelog (`assets/rendered/<version>.zh.png`)
-- 图3 → rendered English changelog (`assets/rendered/<version>.png`)
+- 图1 → cover generated via `$zenmux-image-generation` (prefer `.context/claudecode-cli-changelog/assets/covers/<version>/<generated-or-returned-filename>.png` when bundling assets here)
+- 图2 → rendered Chinese changelog (`.context/claudecode-cli-changelog/assets/rendered/<version>.zh.png`)
+- 图3 → rendered English changelog (`.context/claudecode-cli-changelog/assets/rendered/<version>.png`)
 
 Both rendered images are produced in Step 5, so the reference line is always accurate. Do not omit or paraphrase it.
 
@@ -215,7 +228,7 @@ This skill only supplies the changelog-specific handoff brief:
   - `generation_params`: `1024x1536`, `quality=high`, `-n 2`, and the intended output folder.
 - Optimization requirement: after drafting the four concept briefs, hand them to `$zenmux-image-generation` and let that skill optimize each prompt using its current cookbook, model-selection, confirmation, and API workflow. This changelog skill should not hand-write final API prompts when `$zenmux-image-generation` can optimize them.
 - Batch requirement: generate **4 sequential concept batches**, **2 candidates per concept** with `-n 2`, for 8 total candidates. Do not merge concepts into a grid or ask for all concepts inside one image.
-- Output preference: save or place final cover assets under `<skill-dir>/assets/covers/<version>/<concept-slug>/`, preserving the image-generation skill's filenames unless the user asks for canonical names.
+- Output preference: save or place final cover assets under `<project-dir>/.context/claudecode-cli-changelog/assets/covers/<version>/<concept-slug>/`, preserving the image-generation skill's filenames unless the user asks for canonical names.
 - After generation: report the output paths only. Do not rank, select, or recommend a final 图1 unless the user explicitly asks.
 - Avoid: emoji, stock-photo people, cluttered fake app screenshots, malformed words, watermarks, bland gradient backgrounds, busy small text, and multi-variant grids inside a single image.
 
@@ -232,25 +245,29 @@ Output a short summary: version, saved file paths (changelog EN/ZH + rendered PN
 
 ## Output locations
 
-All paths below are relative to `<skill-dir>` (the installed `claudecode-cli-changelog/` folder; its absolute prefix varies by agent).
+Bundled code/assets live under `<skill-dir>`; generated runtime output lives under `<project-dir>/.context/claudecode-cli-changelog/`.
 
 ```
 <skill-dir>/
 ├── SKILL.md
 ├── scripts/
-│   ├── find_existing_changelog.py          # Local archive duplicate check
-│   └── render_changelog.py                 # Markdown → dark-themed PNG (Playwright)
+│   ├── find_existing_changelog.ts          # Local archive duplicate check
+│   └── render_changelog.ts                 # Markdown → dark-themed PNG (Playwright)
+└── assets/
+    └── claude.png                          # Bundled Claude logo reference for cover handoff
+
+<project-dir>/.context/claudecode-cli-changelog/
+├── .gitignore                              # Runtime-created; ignores generated image/media files
 ├── assets/
-│   ├── claude.png                          # Bundled Claude logo reference for cover handoff
-│   ├── covers/
+│   ├── rendered/
+│   │   ├── <version>.zh.png                # Rendered Chinese changelog (图2 in rednote)
+│   │   └── <version>.png                   # Rendered English changelog (图3 in rednote)
+│   └── covers/
 │   │   └── <version>/                      # Folder named by version
 │   │       ├── concept-01-<content-derived-slug>/
 │   │       ├── concept-02-<content-derived-slug>/
 │   │       ├── concept-03-<content-derived-slug>/
 │   │       └── concept-04-<content-derived-slug>/
-│   └── rendered/
-│       ├── <version>.zh.png                # Rendered Chinese changelog (图2 in rednote)
-│       └── <version>.png                   # Rendered English changelog (图3 in rednote)
 ├── changelogs/
 │   ├── <version>.md                        # English, upstream verbatim
 │   └── <version>.zh.md                     # Chinese translation
@@ -259,4 +276,4 @@ All paths below are relative to `<skill-dir>` (the installed `claudecode-cli-cha
 ```
 
 Files are version-named (not date-named) so re-running the skill for the same release is idempotent.
-Generated image folders (`assets/rendered/` and `assets/covers/`) are gitignored because they are reproducible local/social assets and can become large.
+Generated image folders (`assets/rendered/` and `assets/covers/`) are gitignored inside `.context/claudecode-cli-changelog/` because they are reproducible local/social assets and can become large.
