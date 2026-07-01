@@ -36,10 +36,10 @@ themes:
 # 出图的模型与参数（所有主题通用）。界面稿含大量中文文案 + 精细排版，对文字渲染
 # 要求高，故默认高质量模型 + high；别用 fast/low 档，易糊字错字。
 rendering:
-  # 多语言文字渲染与复杂版面最稳；也可换 openai/gpt-image-2。
-  model: google/gemini-3-pro-image-preview
-  quality: high            # openai/* 模型会转成 --quality high；密集文字必须 high
+  # gpt-image-2：文字渲染稳、支持自定义尺寸（16 的倍数、长宽比 1:3–3:1），Web 端可直接出 2K。
+  model: openai/gpt-image-2
+  quality: high            # openai/* 模型的质量档位；密集文字必须 high
   size:
     mobile: 1024x1536      # 竖版手机界面
-    web: 1536x1024         # 桌面 Web / 横版
+    web: 2560x1440         # 桌面 Web / 横版，2K（gpt-image-2 支持的自定义尺寸，高于此值渲染不稳定）
     square: 1024x1024      # 方形卡片 / 组件特写

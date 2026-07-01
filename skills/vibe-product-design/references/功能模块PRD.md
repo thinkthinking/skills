@@ -245,11 +245,10 @@ npx --yes tsx <skill-dir>/scripts/style_prompt.ts plan --project-dir <project-di
 提示词前缀，此处再强调一次，撰写画面描述时对齐。）
 
 **出图参数**用第 1 步 `plan`/`load` 返回里的 `rendering`（来自 `config/prototype-style.yaml`，
-所有主题通用，可在配置里改）：`model`（默认 `google/gemini-3-pro-image-preview`，多语言文字与
-复杂版面最稳；也可换 `openai/gpt-image-2`，别用 fast/low 档以免糊字错字）、`quality`（默认 `high`，
-`openai/*` 模型转成 `--quality high`，密集中文必须 high）、`size`（按界面形态选：手机 `mobile`
-= 1024x1536、Web `web` = 1536x1024、方形 `square` = 1024x1024，别用默认方形硬套手机页）。具体
-调用方式、参数含义以 `zenmux-image-generation` 自己的 `SKILL.md` 为准。
+所有主题通用，可在配置里改）：`model`（默认 `openai/gpt-image-2`，文字渲染稳、支持自定义尺寸，别用
+fast/low 档以免糊字错字）、`quality`（默认 `high`，密集中文必须 high）、`size`（按界面形态选：手机
+`mobile` = 1024x1536、Web `web` = 2560x1440（2K）、方形 `square` = 1024x1024，别用默认方形硬套
+手机页）。具体调用方式、参数含义以 `zenmux-image-generation` 自己的 `SKILL.md` 为准。
 
 ### 第 3 步 · 输出路径与数量
 
