@@ -167,29 +167,35 @@
 
 产出的是**高保真界面稿**，把每个关键界面最重要的设计决策展现出来——不是灰框线框图。
 
-**风格不写死在这份文档里，而是由 skill 的配置驱动**：用户只在 `config/prototype-style.yaml`
-里写**一句话主题**（`active_theme`，默认原研哉 / 无印良品），skill 通过一步**预处理**把这句主题
-用大模型展开成一份可复用的「风格提示词文件」并缓存，出图时**加载**这段风格提示词、拼在每张图的
-具体画面描述之前。用户不需要手填配色/字体/留白等一堆细节。
+**风格不写死在这份文档里，而是由配置驱动**：用户只写**一句话主题**（`active_theme`，默认原研哉），
+skill 通过一步**预处理**把这句主题用大模型展开成一份可复用的「风格提示词文件」并缓存，出图时
+**加载**这段风格提示词、拼在每张图的具体画面描述之前。用户不需要手填配色/字体/留白等一堆细节。
+
+**配置存放在用户项目的 `.context` 下，不在 skill 目录里**——`style_prompt.ts` 首次运行会把 skill
+的配置模板复制到 `<project-dir>/.context/vibe-product-design/config/`（只在缺失时复制，不覆盖用户
+改动），之后读写都在这里，这样 skill 升级覆盖自己的文件时不会清掉用户配置与缓存。
 
 ```text
-active_theme（用户写的一句话主题）
-  → 预处理：style_prompt.py plan → 若无缓存，按 brief 用大模型展开成 config/generated/<slug>.style.md
-  → 加载：style_prompt.py load → 取出风格提示词前缀
+active_theme（用户在 .context 下 prototype-style.yaml 里写的一句话主题）
+  → 预处理：style_prompt.ts plan → 若无缓存，按 brief 用大模型展开成 .context/.../generated/<slug>.style.md
+  → 加载：style_prompt.ts load → 取出风格提示词前缀
   → 每张图 prompt = 风格提示词前缀 + 本图具体画面 → 交给 zenmux-image-generation 出图
 ```
 
 `<skill-dir>` = 含本 skill `SKILL.md` 的目录（`功能模块PRD.md` 在其 `references/` 下，即上一级）。
+脚本是 TypeScript，用 `npx --yes tsx <脚本>` 运行（本机需有 Node.js/npm，`npx` 会按需拉起 tsx/prettier）。
 
 在写第 4 章之前，先确定本功能要画哪几张原型图（对应关键界面/状态），一次性把所有画面描述列出来
 让用户确认，再统一生成，减少来回调用次数。
 
 ### 第 1 步 · 加载风格（预处理 + 缓存）
 
-先跑 `plan`，它会解析当前主题、检查缓存，告诉你风格提示词是否已就绪：
+先跑 `plan`（带 `--project-dir`，指向用户项目根）。首次运行它会把 skill 的配置模板复制到
+`<project-dir>/.context/vibe-product-design/config/`，再解析当前主题、检查缓存，告诉你风格提示词
+是否已就绪：
 
 ```bash
-python3 <skill-dir>/scripts/style_prompt.py plan
+npx --yes tsx <skill-dir>/scripts/style_prompt.ts plan --project-dir <project-dir>
 ```
 
 看返回 JSON 的 `status`：
@@ -198,17 +204,18 @@ python3 <skill-dir>/scripts/style_prompt.py plan
   `prompt_prefix` 就是要拼在每张图前面的风格前缀，`rendering` 是出图参数。直接进第 2 步。
 - **`status: need_generation`** → 该主题还没展开过（用户换了新主题）。返回里的 `brief` 是一份
   **展开任务书**：按它把这句主题**用大模型展开成一段风格提示词**（配色/字体/留白/组件/氛围/规避，
-  并内化通用质量底线），写入 `brief` 指定的 `style_file`（即 `config/generated/<slug>.style.md`）。
+  并内化通用质量底线），写入 `brief` 指定的 `style_file`（即 `.context/.../config/generated/<slug>.style.md`）。
   写完这一步即完成预处理——之后同一主题会一直命中缓存，不必重复展开。写完再跑一次 `load` 取回：
 
   ```bash
-  python3 <skill-dir>/scripts/style_prompt.py load
+  npx --yes tsx <skill-dir>/scripts/style_prompt.ts load --project-dir <project-dir>
   ```
 
-> 换风格：让用户改 `config/prototype-style.yaml` 的 `active_theme`——写成 `themes:` 里的某个
-> key，或直接写一句自由主题文本（如"赛博朋克霓虹，暗色高对比"）。改完重跑 `plan` 即按新主题展开。
-> 想强制重新展开（改了主题描述但 slug 没变时）加 `--force`。零第三方依赖：脚本优先用 PyYAML，
-> 没装则自带极简解析器兜底，开箱即用。
+> 换风格：让用户改 `.context/vibe-product-design/config/prototype-style.yaml` 的 `active_theme`
+> ——写成 `themes:` 里的某个 key，或直接写一句自由主题文本（如"赛博朋克霓虹，暗色高对比"）。改完重跑
+> `plan` 即按新主题展开。想强制重新展开（改了主题描述但 slug 没变时）加 `--force`。改
+> `<skill-dir>/config/` 里的模板没用——运行时以 `.context` 下的副本为准。零第三方依赖：脚本内置极简
+> YAML 解析器，`npx` 会按需拉起 tsx，开箱即用。
 
 ### 第 2 步 · 逐图拼 prompt 并出图
 
@@ -274,7 +281,7 @@ npx skills add https://github.com/zenmux/skills --skill zenmux-image-generation 
 写入 `features/<slug>/PRD.md`，运行：
 
 ```bash
-python3 <skill-dir>/scripts/format_feature_prd.py <project-dir>/.context/requirements/vibe-product-design/features/<slug>/PRD.md
+npx --yes tsx <skill-dir>/scripts/format_feature_prd.ts <project-dir>/.context/requirements/vibe-product-design/features/<slug>/PRD.md
 ```
 
 规范化格式后，告诉用户文档路径、本次版本号、关键改动，以及原型图数量与存放路径。这份单文档

@@ -50,32 +50,41 @@ metadata:
 `<skill-dir>` 是包含本 `SKILL.md` 的目录。`<project-dir>` 是用户当前项目根目录——优先用 Git 仓库根
 （`git rev-parse --show-toplevel`），否则当前工作目录。
 
-**skill 自带的可配置资产**（在 `<skill-dir>` 下，跟着 skill 走，不进用户项目产出目录）：
+**skill 自带的脚本与配置模板**（在 `<skill-dir>` 下，跟着 skill 走，**skill 升级时会被覆盖**，
+所以不要在这里改配置）：
 
 ```text
 <skill-dir>/
-├── config/
+├── config/                           # 配置「模板」——首次运行复制到 .context，之后不再读这里
 │   ├── prototype-style.yaml          # 原型图风格配置：用户写一句话主题 active_theme（默认原研哉）
 │   └── generated/
-│       ├── kenya-hara.style.md       # 默认主题预生成的风格提示词（开箱即用）
-│       └── <slug>.style.md           # 换主题后预处理生成/缓存的风格提示词
-└── scripts/
-    ├── style_prompt.py               # 风格「预处理 + 加载」协调器（plan / load / params）
-    ├── format_feature_prd.py         # 模式 B 单文档规范化
-    └── merge_prd.py                  # 模式 A 合并 + 规范化
+│       └── kenya-hara.style.md       # 默认主题预生成的风格提示词（开箱即用）
+└── scripts/                          # TypeScript，用 `npx --yes tsx <脚本>` 运行（需本机有 Node/npx）
+    ├── style_prompt.ts               # 风格「预处理 + 加载」协调器（plan / load / params）
+    ├── merge_prd.ts                  # 模式 A 合并 + 规范化
+    ├── format_feature_prd.ts         # 模式 B 单文档规范化
+    └── _md.ts                        # 共享的 Markdown 规范化（内部调用 npx prettier）
 ```
 
-**用户项目里的产出**都放在同一个根目录下（模式 A 和模式 B 共用，模式 B 的功能文件夹平级放在
-`features/` 下）：
+**用户项目里的运行时数据**都在 `.context` 下。**配置从 skill 模板复制到 `.context` 后就以
+`.context` 里的为准**——这样 skill 升级覆盖自己的 `config/` 时，不会动到用户的配置和缓存：
 
 ```text
-<project-dir>/.context/requirements/vibe-product-design/
-├── PRD.md, 00-05 章..., _changelog.md   # 模式 A 产出
-└── features/
-    └── <功能名 slug>/
-        ├── PRD.md                        # 模式 B 产出（单文档）
-        └── assets/                       # 高保真原型图（风格由 config 驱动，默认原研哉）
+<project-dir>/.context/
+├── vibe-product-design/config/           # 运行时配置（首次由 style_prompt.ts 从模板复制而来）
+│   ├── prototype-style.yaml              #   用户在这里改风格主题；skill 升级不覆盖
+│   └── generated/<slug>.style.md         #   预处理生成/缓存的风格提示词
+└── requirements/vibe-product-design/     # PRD 产出（模式 A、B 共用）
+    ├── PRD.md, 00-05 章..., _changelog.md    # 模式 A 产出
+    └── features/
+        └── <功能名 slug>/
+            ├── PRD.md                        # 模式 B 产出（单文档）
+            └── assets/                       # 高保真原型图（风格由 config 驱动，默认原研哉）
 ```
+
+> **配置 bootstrap**：`style_prompt.ts` 首次运行（带 `--project-dir`）时，会把 `<skill-dir>/config/`
+> 复制到 `<project-dir>/.context/vibe-product-design/config/`——**只在目标缺失时复制，绝不覆盖
+> 用户已有改动**。之后所有风格配置与缓存的读写都在 `.context` 下，与 skill 自身解耦。
 
 第一次写入前先建目录（模式 A 建根目录；模式 B 额外建 `features/<slug>/assets/`）：
 
@@ -260,7 +269,7 @@ ls -a <project-dir>/.context/requirements/vibe-product-design/ 2>/dev/null
 当某一章内容预计超过单次输出上限时：
 
 - 把该章拆成 `00-产品概述.md`、`00-产品概述.part2.md`… 这样的续写文件（主文件不带 part 后缀，
-  续写从 `.part2` 起）。`merge_prd.py` 会按 `part` 序号自动接续合并。
+  续写从 `.part2` 起）。`merge_prd.ts` 会按 `part` 序号自动接续合并。
 - **每个续写段开头写一行** `<!-- 续写自 00-产品概述.md 第N段/共M段 -->`，并用一句话承接上一段
   结尾（"接上一段的功能清单，继续 L3 功能点…"），确保跨段连贯。
 - 不要为了省事而压缩内容——宁可多分一段，也要把该写的写完整。
@@ -271,25 +280,20 @@ ls -a <project-dir>/.context/requirements/vibe-product-design/ 2>/dev/null
 生成最终交付物：
 
 ```bash
-python3 <skill-dir>/scripts/merge_prd.py <project-dir>/.context/requirements/vibe-product-design/
+npx --yes tsx <skill-dir>/scripts/merge_prd.ts <project-dir>/.context/requirements/vibe-product-design/
 ```
 
-脚本会：先用 **mdformat** 把每个分章文件（含 `_changelog.md`）就地规范化，再按章节序号（及 part
-序号）拼成一份带目录的 `PRD.md`、把变更记录表嵌在开头，最后对整份 PRD 再过一遍 mdformat，输出在同一
+脚本会：先用 **prettier** 把每个分章文件（含 `_changelog.md`）就地规范化，再按章节序号（及 part
+序号）拼成一份带目录的 `PRD.md`、把变更记录表嵌在开头，最后对整份 PRD 再过一遍 prettier，输出在同一
 目录下。完成后告诉用户最终 PRD 的路径、本次版本号与关键改动，并简要说明它包含哪几章。这份 `PRD.md`
 就是呈现给用户的、清晰完整、且**格式合规**的最终成果。
 
-**Markdown 规范化（mdformat）** —— 脚本依赖 [mdformat](https://github.com/hukkin/mdformat)（CommonMark +
-GFM 表格）自动修正格式：标题前后空行、列表缩进、表格对齐、去行尾空白、合并多余空行、文件末尾单换行
-等。它**保证格式化不改变渲染结果**，Mermaid 等代码块内容、`[假设]` 标记、续写注释都原样保留。
+**Markdown 规范化（prettier）** —— 脚本通过 `npx --yes prettier`（GFM 表格）自动修正格式：标题
+前后空行、列表缩进、表格对齐、去行尾空白、合并多余空行、文件末尾单换行等。用 `--prose-wrap preserve`
+不重排中文段落换行，Mermaid 等代码块内容、`[假设]` 标记、续写注释都原样保留。
 
-- 若环境未安装，先装一次（合并前）：
-
-  ```bash
-  pip install mdformat mdformat-gfm
-  ```
-
-- 未安装时脚本会**跳过规范化并提示**，合并照常完成——但应尽量装上以保证产物格式合规。
+- 无需预装：`npx --yes` 会按需拉起 prettier；本机需有 Node.js/npm 环境（跑 TS 脚本本来也需要）。
+- 无法调用 prettier（无网络/无 npx）时脚本会**跳过规范化并提示**，合并照常完成。
 - 调试或不想改动分章文件时，可加 `--no-lint` 跳过规范化。
 
 ---
@@ -339,10 +343,17 @@ GFM 表格）自动修正格式：标题前后空行、列表缩进、表格对�
    用户说"你看着办"时，用合理判断推进并把假设标进对应章节。
 3. **生成高保真原型图（风格由配置驱动）**：按 `references/功能模块PRD.md` 的「原型图生成规范」
    一节执行——这是一条 **config 驱动**的流水线：
-   - **风格不写死**：读 `config/prototype-style.yaml` 的 `active_theme`（用户写的一句话主题，
-     默认原研哉 / 无印良品）。先跑 `scripts/style_prompt.py plan`：若 `status: ready` 直接拿到
-     缓存的风格提示词；若 `status: need_generation`，按返回的 `brief` 把这句主题**用大模型展开**
-     成一段风格提示词写入 `config/generated/<slug>.style.md`（一次性预处理，之后命中缓存）。
+   - **风格不写死**：先跑 `style_prompt.ts plan`（带 `--project-dir`）。首次运行它会把 skill 的
+     配置模板复制到 `<project-dir>/.context/vibe-product-design/config/`（升级不覆盖），并读取其中
+     `prototype-style.yaml` 的 `active_theme`（用户写的一句话主题，默认原研哉）。
+
+     ```bash
+     npx --yes tsx <skill-dir>/scripts/style_prompt.ts plan --project-dir <project-dir>
+     ```
+
+     若返回 `status: ready` 直接拿到缓存的风格提示词；若 `status: need_generation`，按返回的
+     `brief` 把这句主题**用大模型展开**成一段风格提示词，写入 `brief` 指定的 `style_file`
+     （`.context/.../config/generated/<slug>.style.md`，一次性预处理，之后命中缓存），再 `load` 取回。
    - **逐图出图**：每张图 prompt = 风格提示词前缀 ＋ 本图具体画面；检查/安装 `zenmux-image-generation`，
      一次性列出本功能要画的所有界面/状态供用户确认，出图参数用配置里的 `rendering`。
    - 产出的是能**展现关键设计决策**的高保真界面稿（真实文案、按状态各出一张），不是灰框线框图。
@@ -354,7 +365,7 @@ GFM 表格）自动修正格式：标题前后空行、列表缩进、表格对�
 5. **格式规范化**：
 
    ```bash
-   python3 <skill-dir>/scripts/format_feature_prd.py <project-dir>/.context/requirements/vibe-product-design/features/<slug>/PRD.md
+   npx --yes tsx <skill-dir>/scripts/format_feature_prd.ts <project-dir>/.context/requirements/vibe-product-design/features/<slug>/PRD.md
    ```
 
    完成后告诉用户文档路径、本次版本号、关键改动，以及原型图数量与存放路径。这份单文档 `PRD.md`
@@ -398,7 +409,7 @@ Mermaid 或 Markdown 表格，不要画 SVG。** 功能编码上，模式 A 用�
 单个功能点，不套四级，编码规则见 `references/功能模块PRD.md` 第 6 章。
 
 写的时候**用规范的 Markdown**（标题前后留空行、表格用标准 `| --- |` 语法、代码块用三反引号围栏），
-最终细节交给合并脚本（模式 A）或格式化脚本（模式 B）里的 mdformat 统一规范化——你不必手抠对齐，
+最终细节交给合并脚本（模式 A）或格式化脚本（模式 B）里的 prettier 统一规范化——你不必手抠对齐，
 但结构要写对。
 
 ## 不要做的事
@@ -417,12 +428,15 @@ Mermaid 或 Markdown 表格，不要画 SVG。** 功能编码上，模式 A 用�
   有就在其上改、别推倒重写、别静默猜测覆盖。
 - 不要漏掉变更记录：模式 A 每次产出/修改都要更新 `_changelog.md`；模式 B 直接在 `PRD.md` 内的
   变更记录章节更新（日期、版本+1、维护人、关键改动）。
-- 不要自己手写 Markdown lint 规则去抠格式——规范化交给 mdformat（模式 A 用 `merge_prd.py`，
-  模式 B 用 `format_feature_prd.py`）；缺它就 `pip install mdformat mdformat-gfm`，别绕过。
+- 不要自己手写 Markdown lint 规则去抠格式——规范化交给脚本里的 prettier（模式 A 用 `merge_prd.ts`，
+  模式 B 用 `format_feature_prd.ts`，都用 `npx --yes tsx` 运行），别绕过。
+- 不要改 `<skill-dir>/config/` 里的配置模板——那是模板，skill 升级会覆盖。配置以
+  `<project-dir>/.context/vibe-product-design/config/` 下的为准（首次运行由脚本从模板复制过去）。
 - 模式 B 的原型图必须生成到本功能的 `features/<slug>/assets/` 目录下——不要用
   `zenmux-image-generation` 自己的默认输出路径，否则 PRD 里的相对路径引用会失效。
-- 不要把原型图风格写死或凭记忆瞎编——风格由 `config/prototype-style.yaml` 的 `active_theme` 驱动，
-  出图前先跑 `scripts/style_prompt.py plan` 拿到（或按 `brief` 预处理生成）对应的风格提示词。
+- 不要把原型图风格写死或凭记忆瞎编——风格由 `.context` 下 `prototype-style.yaml` 的 `active_theme`
+  驱动，出图前先跑 `style_prompt.ts plan --project-dir <项目根>` 拿到（或按 `brief` 预处理生成）
+  对应的风格提示词。
 - 不要让用户手填一堆配色/字体/留白细节——用户只写一句话主题，细节由预处理用大模型展开成风格
   提示词文件并缓存复用。
 - 不要产出灰框占位 / 手绘线框图——始终是高保真、含真实文案、能展现关键设计决策的界面稿；
