@@ -46,7 +46,7 @@ memory-bearing rather than a generic generator.
 | Skill | Use case |
 | --- | --- |
 | [`vibe-writing`](./skills/vibe-writing/SKILL.md) | Human-led AI co-writing with user-level memory, MBTI cold-start, mirror-persona feedback, and project-local outputs under `results/vibe-writing` |
-| [`vibe-product-design`](./skills/vibe-product-design/SKILL.md) | Super product-manager thinking partner that maps a product's complete picture with no gaps — go 0→1 from a raw idea or audit an existing design for what's missing, thin, unvalidated, or contradictory; outputs a living brief + coverage map under `.context/requirements/vibe-product-design` |
+| [`vibe-product-design`](./skills/vibe-product-design/SKILL.md) | Turns a product idea or feature request into a delivery-ready PRD — triages between a full 0→1 six-chapter product design or a lightweight feature-module PRD with config-driven high-fidelity prototypes; outputs land in one folder per request under `.context/vibe-product-design` |
 
 ## License
 

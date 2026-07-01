@@ -30,6 +30,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { ensureVibeGitignoreFrom } from "./_context.ts";
 
 const SKILL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TEMPLATE_CONFIG_DIR = path.join(SKILL_DIR, "config");
@@ -117,6 +118,9 @@ function resolveConfigDir(args: Args): string {
   if (fs.existsSync(TEMPLATE_CONFIG_DIR)) {
     copyIfMissing(TEMPLATE_CONFIG_DIR, runtimeDir);
   }
+  // 首次写入时在产出根（.context/vibe-product-design）落一份 .gitignore，
+  // 忽略高保真原型图等大文件、保留 PRD Markdown 可提交（缺失才写）。
+  ensureVibeGitignoreFrom(runtimeDir);
   return runtimeDir;
 }
 

@@ -1,6 +1,6 @@
 # 模式 B · 功能模块 PRD 写作指南
 
-> **产出文件：** `features/<功能名 slug>/PRD.md`（单文档，不拆章、不需要合并脚本）
+> **产出文件：** `.context/vibe-product-design/<功能名 slug>/PRD.md`（单文档，不拆章、不需要合并脚本）
 > **输入：** 已有产品背景（若存在模式 A 的 `PRD.md`/分章文件，直接读取引用） + 轻量问卷澄清结论 +
 > 高保真原型图（原研哉 / 无印良品风格，存于同目录 `assets/`）。
 > **作用：** 让团队里的每个角色，拿着**这一份文档**就能各自开工——不需要再追问你、不需要再开会对齐。
@@ -245,7 +245,7 @@ npx --yes tsx <skill-dir>/scripts/style_prompt.ts plan --project-dir <project-di
 默认输出路径，否则 PRD 里的相对路径引用会失效：
 
 ```bash
---output-dir "<project-dir>/.context/requirements/vibe-product-design/features/<slug>/assets"
+--output-dir "<project-dir>/.context/vibe-product-design/<功能 slug>/assets"
 ```
 
 一个功能通常配 3–8 张图（覆盖主流程每个关键节点 + 1–2 个关键异常/空状态），不凑数、不漏核心
@@ -278,10 +278,10 @@ npx skills add https://github.com/zenmux/skills --skill zenmux-image-generation 
 
 ## 完成后
 
-写入 `features/<slug>/PRD.md`，运行：
+写入 `<功能 slug>/PRD.md`，运行：
 
 ```bash
-npx --yes tsx <skill-dir>/scripts/format_feature_prd.ts <project-dir>/.context/requirements/vibe-product-design/features/<slug>/PRD.md
+npx --yes tsx <skill-dir>/scripts/format_feature_prd.ts <project-dir>/.context/vibe-product-design/<功能 slug>/PRD.md
 ```
 
 规范化格式后，告诉用户文档路径、本次版本号、关键改动，以及原型图数量与存放路径。这份单文档

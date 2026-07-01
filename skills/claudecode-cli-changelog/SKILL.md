@@ -171,28 +171,56 @@ Optional flags:
 
 ### 6. (Optional) Draft a Xiaohongshu post
 
-When the user asks for a rednote / 小红书 post about the update, create a short post directly from the changelog content. **The output goes under the current project's context folder**, not in rednote-generator's own published dir:
+When the user asks for a rednote / 小红书 post about the update, create a detailed but scannable post directly from the changelog content. **The output goes under the current project's context folder**, not in rednote-generator's own published dir:
 
 ```
 <project-dir>/.context/claudecode-cli-changelog/rednotes/claude-code-<version>.md
 ```
 
-The body should be extremely short:
+Before drafting, do a product-manager read of the release:
 
-1. One natural Chinese sentence that summarizes the release and highlights the most important point(s). Write like a person, not a changelog index. Do not enumerate bullets.
-2. A standalone reference line, exactly:
+- Read the selected English archive and Chinese translation end to end. Do not write from the version number or first bullet only.
+- Review up to the 10 most recent prior Claude Code changelog entries for continuity. Prefer `<project-dir>/.context/claudecode-cli-changelog/changelogs/`, then any bundled `<skill-dir>/changelogs/`; if local history is thin, fetch enough of the upstream `CHANGELOG.md` to inspect the latest 10 headings instead of only the current entry. This history pass is for pattern recognition: a multi-release workflow arc, a recently introduced feature being stabilized, model/provider availability, terminal/TUI friction, plugin/skill evolution, permissions/sandboxing, or whether the latest release is mostly maintenance. Do not invent a callback when the evidence is weak.
+- Pick 3-5 numbered highlights that a user, developer, or product manager would immediately care about. Prioritize direct experience: new commands/workflows, plugin or skill behavior, worktree/session/resume behavior, model/provider support, terminal/editor interaction, permissions/security behavior, background agents, reliability, performance, and fixes that remove visible friction.
+- De-prioritize internal refactors, dependency bumps, and tiny edge-case fixes unless they clearly change how someone uses Claude Code.
+- For each highlight, explain both what changed and why it matters in practice. When a highlight continues a recent arc, add a short natural callback such as "这也接上了前几版一直在补的 plugin / worktree / 后台 agent 能力".
 
-> 完整原版 ChangeLog 见图2（中文版）、图3（英文原版）。
+The Xiaohongshu post must be paste-ready plain text, not Markdown. The saved file may be `.md` for project organization, but the content itself must avoid Markdown syntax: no `#` heading marker, no `**bold**`, no `-` bullet lists, no `>` quote blocks, no code fences, and no backticks around commands, settings, or product terms. Hashtags at the end are the only acceptable `#` usage because they are Xiaohongshu tags.
 
-Keep hashtags after the body when useful. The title should include the version number and may reuse the rednote cover title.
+Use a human, lightly opinionated voice inspired by `$vibe-writing`: preserve texture, emotional temperature, and small personal judgments. Do not sand the post into generic AI prose. Separate stronger writing from smoother writing: a concrete, slightly opinionated sentence is better than a polished but empty one.
 
-Example body shape:
+Avoid AI-flavored filler such as "赋能", "显著提升", "全面升级", "多维度", "闭环", "深度优化", "值得关注的是" unless the changelog itself makes that phrasing unavoidable. Do not over-explain the workflow or say "以下是". Write like a real developer/product manager sharing what they noticed after reading the changelog.
 
-```markdown
-Claude Code <version> 这版主要修了 <one key user-facing or architecture-facing issue>，顺带补上 <1-2 related highlights>，属于 <who should care / why it matters> 的一次更新。
+Do not use a fixed transition sentence between the reference line and the numbered highlights. That sentence should be content-specific, or omitted entirely when the title and first highlight already carry the post. Vary the opening based on the release story: a big feature can start with a direct judgment, a maintenance release can start with "这版看起来不大，但...", a model/provider update can start with who can use it now, and a workflow/reliability release can start with the friction it removes. Repeated generic lines make the series feel templated.
+
+The Xiaohongshu post should use this plain-text structure:
+
+```text
+Claude Code <version>｜<one sharp, user-facing headline>
 
 完整原版 ChangeLog 见图2（中文版）、图3（英文原版）。
+
+<可选的一句内容化开场；也可以直接进入第 1 条。不要每篇都用同一句套话。>
+
+1｜<最影响使用体验的更新>
+<1-2 句：基于 changelog 说明具体变化，以及用户/开发者为什么会感受到它。可以带一点判断，但不要夸张。>
+
+2｜<第二个关键变化>
+<1-2 句：如果它延续最近 10 条里的某条产品线，就自然 call back；没有证据就不要硬连。>
+
+3｜<第三个关键变化>
+<1-2 句：把价值说成人话，避免复读 release note。>
+
+我的判断：<一句收束：这是大功能更新、体验补齐、安全/稳定性修复，还是偏维护的一版；说清楚谁最该看。>
+
+#ClaudeCode #Claude #AI编程 #开发工具
 ```
+
+The standalone reference line must be the first non-title line and must be exactly this plain text line:
+
+完整原版 ChangeLog 见图2（中文版）、图3（英文原版）。
+
+Keep hashtags after the body when useful. The title should include the version number and may reuse the rednote cover title. Write in Chinese, conversational but precise: like a developer/product manager who has actually reviewed the changelog and is telling other Claude Code users what to notice first.
 
 The Xiaohongshu post is laid out as:
 
@@ -215,27 +243,30 @@ This skill only supplies the changelog-specific handoff brief:
 - Reference image: use `<skill-dir>/assets/claude.png` (bundled with this skill) as the Claude logo / wordmark reference.
 - Brand grounding: keep the Claude identity recognizable when a logo / wordmark is used, but do **not** force every concept into Claude orange, a dark theme, terminal UI, editorial layout, workflow map, or any other fixed house style.
 - Content grounding: before writing image prompts, distill the changelog into one sharp cover headline, 1-2 supporting phrases, 2-3 release-specific visual motifs, and one reason a developer should care. Do not make a generic "Claude Code updated" poster when the release has a clearer product story.
-- Creative concept requirement: write **4 fresh, content-driven cover concepts** for this specific release. The four concepts must be meaningfully different in metaphor, composition, material / medium, color and light, and typography behavior. Invent the directions from the changelog itself; do not reuse a fixed style menu across releases.
+- Style randomization: read `<skill-dir>/references/cover-style-pool.md`, randomly sample 4 different styles for this run, and record the selected style names in the handoff. Do not reuse the same four styles by habit. If one sampled style obviously fights the release story or brand/logo constraints, swap it for another random style and note the reason.
+- Creative concept requirement: write **4 fresh, content-driven cover concepts** for this specific release, one per sampled style. The styles should shape the visual language, but the changelog story still decides the headline, metaphor, and composition.
 - For each concept, produce a compact handoff brief containing:
   - `concept_title`: a memorable name derived from the release story.
-  - `style_slug`: a filesystem-safe slug derived from the concept title, prefixed with `concept-01-` through `concept-04-`.
+  - `style_name`: the sampled style from `references/cover-style-pool.md`.
+  - `style_slug`: a filesystem-safe slug derived from the sampled style and concept title, prefixed with `style-01-` through `style-04-`.
   - `cover_headline`: the exact short title to place on the cover.
   - `supporting_text`: 1-2 optional short phrases; keep text minimal.
   - `visual_metaphor`: the central image idea tied to the changelog.
   - `composition`: framing, focal object, depth, negative space, and text placement.
   - `material_palette`: color, texture, lighting, and medium choices; vary these across the four concepts.
   - `reference_usage`: how to use the Claude reference image, or when to omit it.
-  - `generation_params`: `1024x1536`, `quality=high`, `-n 2`, and the intended output folder.
-- Optimization requirement: after drafting the four concept briefs, hand them to `$zenmux-image-generation` and let that skill optimize each prompt using its current cookbook, model-selection, confirmation, and API workflow. This changelog skill should not hand-write final API prompts when `$zenmux-image-generation` can optimize them.
-- Batch requirement: generate **4 sequential concept batches**, **2 candidates per concept** with `-n 2`, for 8 total candidates. Do not merge concepts into a grid or ask for all concepts inside one image.
-- Output preference: save or place final cover assets under `<project-dir>/.context/claudecode-cli-changelog/assets/covers/<version>/<concept-slug>/`, preserving the image-generation skill's filenames unless the user asks for canonical names.
+  - `generation_params`: `1024x1536`, `quality=high`, `openai_n=1`, `gemini_n=1`, and distinct intended output folders for the two model/protocol runs.
+- Model/protocol requirement: for every sampled style, generate exactly one image with `openai/gpt-image-2` via the OpenAI Images edit protocol, and exactly one image with `google/gemini-3.1-flash-image-preview` (or the exact current `google/gemini-3.1-flash-image` model id if `list_models.sh` shows that name) via the Gemini image edit protocol. Both calls must pass the Claude reference image so the request is an edit/reference-image workflow, not pure text-to-image.
+- Optimization requirement: after drafting the four style briefs, hand them to `$zenmux-image-generation` and let that skill optimize each prompt using its current OpenAI and Gemini cookbooks, confirmation rules, API commands, and troubleshooting. This changelog skill should not hand-write final API prompts when `$zenmux-image-generation` can optimize them.
+- Batch requirement: generate **8 total images**: 4 sampled styles x 2 model/protocol variants. For each style, run one `gpt-image-2` OpenAI edit batch with `-n 1`, then one Gemini edit batch with `-n 1`, using distinct output folders such as `<style-slug>/openai-gpt-image-2/` and `<style-slug>/gemini-3.1-flash-image/`. Do not merge styles or models into a grid.
+- Output preference: save or place final cover assets under `<project-dir>/.context/claudecode-cli-changelog/assets/covers/<version>/<style-slug>/<model-slug>/`, preserving the image-generation skill's filenames unless the user asks for canonical names.
 - After generation: report the output paths only. Do not rank, select, or recommend a final 图1 unless the user explicitly asks.
 - Avoid: emoji, stock-photo people, cluttered fake app screenshots, malformed words, watermarks, bland gradient backgrounds, busy small text, and multi-variant grids inside a single image.
 
 Operational rules:
 
 - Follow `$zenmux-image-generation` exactly for prompt optimization, user confirmation, model choice, API invocation, references, output count, dependencies, and error handling.
-- For this changelog cover workflow, request 4 sequential concept batches with `-n 2` each. Do not run the 4 batches in parallel unless each batch has a distinct output folder or otherwise cannot collide.
+- For this changelog cover workflow, request 4 sampled styles and 8 total one-image batches: `openai/gpt-image-2` via OpenAI image edit protocol and `google/gemini-3.1-flash-image-preview` via Gemini image edit protocol for each style. Do not run batches in parallel unless every batch has a distinct output folder or otherwise cannot collide.
 - If `$zenmux-image-generation` defaults change, use its current defaults rather than the older assumptions in archived changelog runs.
 - If the generated files land in `$zenmux-image-generation`'s own output folder, report those paths and only copy or reorganize them into this skill's cover folder when the user asks or the current run explicitly needs the rednote asset bundle.
 
@@ -253,6 +284,8 @@ Bundled code/assets live under `<skill-dir>`; generated runtime output lives und
 ├── scripts/
 │   ├── find_existing_changelog.ts          # Local archive duplicate check
 │   └── render_changelog.ts                 # Markdown → dark-themed PNG (Playwright)
+├── references/
+│   └── cover-style-pool.md                 # 60 cover styles for random sampling
 └── assets/
     └── claude.png                          # Bundled Claude logo reference for cover handoff
 
@@ -264,10 +297,12 @@ Bundled code/assets live under `<skill-dir>`; generated runtime output lives und
 │   │   └── <version>.png                   # Rendered English changelog (图3 in rednote)
 │   └── covers/
 │   │   └── <version>/                      # Folder named by version
-│   │       ├── concept-01-<content-derived-slug>/
-│   │       ├── concept-02-<content-derived-slug>/
-│   │       ├── concept-03-<content-derived-slug>/
-│   │       └── concept-04-<content-derived-slug>/
+│   │       ├── style-01-<style-and-content-slug>/
+│   │       │   ├── openai-gpt-image-2/
+│   │       │   └── gemini-3.1-flash-image/
+│   │       ├── style-02-<style-and-content-slug>/
+│   │       ├── style-03-<style-and-content-slug>/
+│   │       └── style-04-<style-and-content-slug>/
 ├── changelogs/
 │   ├── <version>.md                        # English, upstream verbatim
 │   └── <version>.zh.md                     # Chinese translation

@@ -66,30 +66,45 @@ metadata:
     └── _md.ts                        # 共享的 Markdown 规范化（内部调用 npx prettier）
 ```
 
-**用户项目里的运行时数据**都在 `.context` 下。**配置从 skill 模板复制到 `.context` 后就以
-`.context` 里的为准**——这样 skill 升级覆盖自己的 `config/` 时，不会动到用户的配置和缓存：
+**用户项目里的运行时数据都在 `<project-dir>/.context/vibe-product-design/` 这一个产出根下**——
+config、模式 A、模式 B 全都归在这里，不再另开 `.context/requirements/`。**配置从 skill 模板复制到
+这里后就以这里的为准**——这样 skill 升级覆盖自己的 `config/` 时，不会动到用户的配置和缓存：
 
 ```text
-<project-dir>/.context/
-├── vibe-product-design/config/           # 运行时配置（首次由 style_prompt.ts 从模板复制而来）
-│   ├── prototype-style.yaml              #   用户在这里改风格主题；skill 升级不覆盖
-│   └── generated/<slug>.style.md         #   预处理生成/缓存的风格提示词
-└── requirements/vibe-product-design/     # PRD 产出（模式 A、B 共用）
-    ├── PRD.md, 00-05 章..., _changelog.md    # 模式 A 产出
-    └── features/
-        └── <功能名 slug>/
-            ├── PRD.md                        # 模式 B 产出（单文档）
-            └── assets/                       # 高保真原型图（风格由 config 驱动，默认原研哉）
+<project-dir>/.context/vibe-product-design/      # 本 skill 唯一的产出根（config + 各需求文件夹）
+├── .gitignore                                   # 首次写入时自动生成：忽略原型图等大文件，PRD Markdown 照常提交
+├── config/                                      # 运行时配置（首次由 style_prompt.ts 从模板复制而来）
+│   ├── prototype-style.yaml                     #   用户在这里改风格主题；skill 升级不覆盖
+│   └── generated/<slug>.style.md                #   预处理生成/缓存的风格提示词
+├── <需求 slug>/                                 # 模式 A：每个产品各占一个文件夹
+│   ├── 00-产品概述.md … 05-功能设计.md           #   分章文档
+│   ├── _changelog.md                            #   变更记录
+│   └── PRD.md                                   #   合并后的最终交付物
+└── <功能 slug>/                                 # 模式 B：每个功能各占一个文件夹（与模式 A 平级）
+    ├── PRD.md                                   #   单文档交付物
+    └── assets/                                  #   高保真原型图（被 .gitignore 忽略）
 ```
+
+**每一次需求，无论模式 A 还是模式 B，都在产出根下新建一个「以需求命名的文件夹」来存放，不要把文件
+散落在产出根本身。** `config/` 与 `.gitignore` 是根下仅有的两个共享项，其余每个直接子文件夹都对应
+一个具体需求（一个产品 / 一个功能），两种模式的需求文件夹互为平级、结构自洽。
 
 > **配置 bootstrap**：`style_prompt.ts` 首次运行（带 `--project-dir`）时，会把 `<skill-dir>/config/`
 > 复制到 `<project-dir>/.context/vibe-product-design/config/`——**只在目标缺失时复制，绝不覆盖
-> 用户已有改动**。之后所有风格配置与缓存的读写都在 `.context` 下，与 skill 自身解耦。
+> 用户已有改动**。之后所有风格配置与缓存的读写都在这里，与 skill 自身解耦。
 
-第一次写入前先建目录（模式 A 建根目录；模式 B 额外建 `features/<slug>/assets/`）：
+> **`.gitignore` 自动生成**：三个脚本（`style_prompt.ts` / `merge_prd.ts` / `format_feature_prd.ts`）
+> 任一首次写入产出根时，会在 `<project-dir>/.context/vibe-product-design/.gitignore` 落一份忽略规则
+> （缺失才写、不覆盖用户改动）：忽略各需求文件夹下的 `assets/` 原型图与 `*.png/jpg/...` 等大型二进制，
+> 保留 `PRD.md` / 分章 / `_changelog` 等 Markdown 可随仓库提交。**本源仓库不应签入任何 `.context/`。**
+
+第一次写入前先建**该需求的文件夹**（`<slug>` 从需求名提炼；模式 B 额外建 `assets/` 子目录）：
 
 ```bash
-mkdir -p <project-dir>/.context/requirements/vibe-product-design
+# 模式 A（新建一个产品的产出文件夹）
+mkdir -p <project-dir>/.context/vibe-product-design/<需求 slug>
+# 模式 B（新建一个功能的产出文件夹，含原型图目录）
+mkdir -p <project-dir>/.context/vibe-product-design/<功能 slug>/assets
 ```
 
 如果文件工具不可用，说明产出本应写在哪里，并把内容留在对话里，不要假装写了文件。
@@ -100,16 +115,16 @@ mkdir -p <project-dir>/.context/requirements/vibe-product-design
 
 1. **读懂需求本质**：用一两句话把你理解的需求复述给用户，确认你抓对了方向。不要一上来甩长问卷。
    匹配用户的语言（主要受众是中文，默认中文）。
-2. **查产出目录现状**，判断这次更可能是哪种场景：
+2. **查产出根现状**，判断这次更可能是哪种场景（列出产出根下已有哪些需求文件夹）：
 
    ```bash
-   ls -a <project-dir>/.context/requirements/vibe-product-design/ 2>/dev/null
-   ls -a <project-dir>/.context/requirements/vibe-product-design/features/ 2>/dev/null
+   ls -a <project-dir>/.context/vibe-product-design/ 2>/dev/null
    ```
 
-   - 已有 `PRD.md`/分章文件、或已有 `features/` 下的功能文件夹 → 说明这个产品已经被分析过，这次
-     大概率是增量。
-   - 目录全空 → 说明这可能是全新产品，也可能只是用户还没跑过这个 skill（不代表产品本身是新的）。
+   - 已有需求文件夹（`config/` 之外的子目录，里面有 `PRD.md`/分章文件）→ 说明这个产品/这些功能
+     已经被分析过，这次大概率是增量；必要时 `ls` 进相关文件夹看它是模式 A（有分章）还是模式 B。
+   - 只有 `config/`（或目录全空）→ 说明这可能是全新产品，也可能只是用户还没跑过这个 skill（不代表
+     产品本身是新的）。
 3. **用 `AskUserQuestion` 问一次路由问题**，确认走哪条路——除非用户的原始表述已经**明确**说了要
    哪一种（例如直接说"帮我做个功能模块 PRD"或"我要从 0 开始梳理这个新产品"）。问法示例：
 
@@ -118,9 +133,9 @@ mkdir -p <project-dir>/.context/requirements/vibe-product-design
    - **选项 B（模式 A · 全量产品设计）：** 从 0 到 1 做完整分析——需求分析、商业画布、用户旅程、
      业务流程、功能设计六章全套，适合全新产品或全新方向，工作量更大。
 
-   如果用户说"你看着办"：按上一步查到的目录现状推断（已有 `features/` 或已有全量 PRD → 推断模式 B
-   的增量；目录全空且描述听起来是全新方向 → 推断模式 A），**一句话说明推断依据**，给用户一次否决
-   机会，而不是直接开始产出。
+   如果用户说"你看着办"：按上一步查到的目录现状推断（已有需求文件夹/全量 PRD → 推断模式 B 的增量；
+   只有 `config/` 或全空、且描述听起来是全新方向 → 推断模式 A），**一句话说明推断依据**，给用户一次
+   否决机会，而不是直接开始产出。
 
 4. **分诊结果落地**：
    - → **模式 A**：进入下方「模式 A · 全量产品设计」，走原有六章流水线。
@@ -148,17 +163,22 @@ mkdir -p <project-dir>/.context/requirements/vibe-product-design
 
 ### 第 0 步 · 先查已有 PRD（增量优先）
 
-**动手写之前，先列一下产出目录**，判断这是「从 0 新建」还是「在已有 PRD 上修改」：
+**动手写之前，先列一下产出根**，看看这个产品是否已有对应的需求文件夹，判断这是「从 0 新建」还是
+「在已有 PRD 上修改」：
 
 ```bash
-ls -a <project-dir>/.context/requirements/vibe-product-design/ 2>/dev/null
+ls -a <project-dir>/.context/vibe-product-design/ 2>/dev/null            # 看有哪些需求文件夹
+ls -a <project-dir>/.context/vibe-product-design/<需求 slug>/ 2>/dev/null # 命中疑似文件夹后再看里面
 ```
 
-- **目录里已有 `PRD.md` 或分章文件（`00-产品概述.md` 等）** → 这是一次**修改**。先读相关分章文件
-  （以及 `_changelog.md`），在**现有内容基础上增改**，不要推倒重写、不要新建一套覆盖掉旧的。改完
-  务必更新 `_changelog.md`（见下方「变更记录（Changelog）」），版本号 +1。
-- **目录为空 / 不存在** → 这是一次**新建**。正常走第 1→4 步，并在写第一章之前先创建 `_changelog.md`，
-  写入首条 `v1.0` 记录。
+- **已有匹配的需求文件夹、里面有 `PRD.md` 或分章文件（`00-产品概述.md` 等）** → 这是一次**修改**。
+  先读相关分章文件（以及 `_changelog.md`），在**现有内容基础上增改**，不要推倒重写、不要新建一套
+  覆盖掉旧的。改完务必更新 `_changelog.md`（见下方「变更记录（Changelog）」），版本号 +1。
+- **没有匹配文件夹** → 这是一次**新建**：先从产品名提炼一个 `<需求 slug>`，`mkdir -p
+  <project-dir>/.context/vibe-product-design/<需求 slug>` 建好该产品的文件夹，正常走第 1→4 步，并在
+  写第一章之前先在该文件夹里创建 `_changelog.md`，写入首条 `v1.0` 记录。
+- 全篇下文所说的「产出目录」，都指这个**该需求专属的文件夹** `<project-dir>/.context/vibe-product-design/<需求 slug>/`，
+  不是产出根本身——不要把分章文件散落在产出根下。
 
 无论新建还是修改，**`_changelog.md` 都要在跑合并脚本之前就位**——脚本会把它嵌进最终 PRD 的开头。
 
@@ -280,7 +300,7 @@ ls -a <project-dir>/.context/requirements/vibe-product-design/ 2>/dev/null
 生成最终交付物：
 
 ```bash
-npx --yes tsx <skill-dir>/scripts/merge_prd.ts <project-dir>/.context/requirements/vibe-product-design/
+npx --yes tsx <skill-dir>/scripts/merge_prd.ts <project-dir>/.context/vibe-product-design/<需求 slug>/
 ```
 
 脚本会：先用 **prettier** 把每个分章文件（含 `_changelog.md`）就地规范化，再按章节序号（及 part
@@ -307,22 +327,22 @@ npx --yes tsx <skill-dir>/scripts/merge_prd.ts <project-dir>/.context/requiremen
 ### 目录与命名
 
 ```text
-<project-dir>/.context/requirements/vibe-product-design/features/
-└── <功能名 slug>/
+<project-dir>/.context/vibe-product-design/
+└── <功能名 slug>/     # 每个功能各占一个文件夹，直接放在产出根下（与模式 A 的产品文件夹平级）
     ├── PRD.md          # 单文档交付物
     └── assets/         # 高保真原型图（风格由 config 驱动，默认原研哉），PRD.md 用相对路径 assets/xxx.png 引用
 ```
 
 - `<功能名 slug>` 从功能名提炼一个简短目录名（去空格/特殊符号），如给已有耳机 App 加"降噪模式
   切换"功能，目录名就是 `降噪模式切换`。
-- **先查 `features/` 目录**，判断是否已有匹配的功能文件夹：
+- **先查产出根**，判断是否已有匹配的功能文件夹：
 
   ```bash
-  ls -a <project-dir>/.context/requirements/vibe-product-design/features/ 2>/dev/null
+  ls -a <project-dir>/.context/vibe-product-design/ 2>/dev/null
   ```
 
   - 已有匹配文件夹 → 这是一次**修改**，在现有 `PRD.md` 上增改，更新其中的变更记录表、版本号 +1。
-  - 没有 → 新建文件夹和 `assets/` 子目录。
+  - 没有 → 在产出根下新建该功能的文件夹和它的 `assets/` 子目录。
   - **拿不准是否匹配已有文件夹时，跟用户确认一句，不要静默猜测覆盖**——这是唯一一份交付物，覆盖错
     代价很高。
 - 模式 B 只有一份文件，**不需要**单独的 `_changelog.md`、**不需要**跑合并脚本；变更记录作为
@@ -330,13 +350,13 @@ npx --yes tsx <skill-dir>/scripts/merge_prd.ts <project-dir>/.context/requiremen
 
 ### 执行步骤
 
-1. **查已有**（见上）：确认是新建还是修改；若同一目录下已有模式 A 的 `PRD.md`/分章文件，读取作为
-   现有产品的背景信息，不要重新问用户已经写过的内容。
+1. **查已有**（见上）：确认是新建还是修改；若产出根下已有相关产品的模式 A 文件夹（含 `PRD.md`/分章
+   文件），读取作为现有产品的背景信息，不要重新问用户已经写过的内容。
 2. **轻量问卷澄清**：比模式 A 更聚焦，按 `references/澄清问卷.md` 的方法问清楚下面四点。这四点有
    先后依赖——前一点的答案决定了后一点该怎么问——**按顺序一个一个问，答完一个再问下一个**，不要
    一批甩出来：
-   1. 这个功能建立在哪个现有产品/模块之上？**先查**同目录下是否已有模式 A 的全量 PRD 或
-      `features/` 下的其他功能文档，能查到就直接引用、一句话跟用户确认，不必问。
+   1. 这个功能建立在哪个现有产品/模块之上？**先查**产出根下是否已有相关产品的模式 A 全量 PRD
+      文件夹、或其它功能的模式 B 文件夹，能查到就直接引用、一句话跟用户确认，不必问。
    2. 这次要解决的核心问题/触发原因是什么？（答案会决定下一步该往哪个方向问影响范围）
    3. 影响范围：基于上一题的核心问题，涉及哪些现有页面/角色/系统？
    4. 边界：这次明确不做什么？（等前面范围定下来之后再问，否则用户不知道该排除什么）
@@ -361,11 +381,11 @@ npx --yes tsx <skill-dir>/scripts/merge_prd.ts <project-dir>/.context/requiremen
      也不要用它默认的 4 变体（每个界面/状态 1 张，关键主界面拿不准方向时给 2 张对比即可）。
 4. **按模板产出单文档 PRD**：完整模板、写作要求、"写给谁看"的检验标准，见
    `references/功能模块PRD.md`——**先读它，再动笔**，不要凭记忆简化。写入
-   `features/<slug>/PRD.md`。
+   `<功能 slug>/PRD.md`。
 5. **格式规范化**：
 
    ```bash
-   npx --yes tsx <skill-dir>/scripts/format_feature_prd.ts <project-dir>/.context/requirements/vibe-product-design/features/<slug>/PRD.md
+   npx --yes tsx <skill-dir>/scripts/format_feature_prd.ts <project-dir>/.context/vibe-product-design/<功能 slug>/PRD.md
    ```
 
    完成后告诉用户文档路径、本次版本号、关键改动，以及原型图数量与存放路径。这份单文档 `PRD.md`
@@ -424,15 +444,17 @@ Mermaid 或 Markdown 表格，不要画 SVG。** 功能编码上，模式 A 用�
 - 不要跳过模式 A 第 2 步问卷澄清、或模式 B 的轻量问卷就闷头写（除非用户明确要你直接写）。
 - 不要把有先后依赖的问题一次性甩给用户；能从代码库/已有文档探索到的答案不要问用户（见
   `references/澄清问卷.md`「怎么问」）。
-- 不要跳过查已有产出这一步：模式 A 查 PRD/分章文件，模式 B 查 `features/` 下是否已有同名文件夹，
-  有就在其上改、别推倒重写、别静默猜测覆盖。
+- 不要把文件散落在产出根：每次需求（模式 A 或 B）都在 `.context/vibe-product-design/` 下新建一个
+  「以需求命名的文件夹」存放，产出根本身只放 `config/` 和 `.gitignore`。
+- 不要跳过查已有产出这一步：动手前先 `ls` 产出根，看有没有匹配的需求文件夹，有就在其上改、别推倒
+  重写、别静默猜测覆盖。
 - 不要漏掉变更记录：模式 A 每次产出/修改都要更新 `_changelog.md`；模式 B 直接在 `PRD.md` 内的
   变更记录章节更新（日期、版本+1、维护人、关键改动）。
 - 不要自己手写 Markdown lint 规则去抠格式——规范化交给脚本里的 prettier（模式 A 用 `merge_prd.ts`，
   模式 B 用 `format_feature_prd.ts`，都用 `npx --yes tsx` 运行），别绕过。
 - 不要改 `<skill-dir>/config/` 里的配置模板——那是模板，skill 升级会覆盖。配置以
   `<project-dir>/.context/vibe-product-design/config/` 下的为准（首次运行由脚本从模板复制过去）。
-- 模式 B 的原型图必须生成到本功能的 `features/<slug>/assets/` 目录下——不要用
+- 模式 B 的原型图必须生成到本功能文件夹的 `<功能 slug>/assets/` 目录下——不要用
   `zenmux-image-generation` 自己的默认输出路径，否则 PRD 里的相对路径引用会失效。
 - 不要把原型图风格写死或凭记忆瞎编——风格由 `.context` 下 `prototype-style.yaml` 的 `active_theme`
   驱动，出图前先跑 `style_prompt.ts plan --project-dir <项目根>` 拿到（或按 `brief` 预处理生成）

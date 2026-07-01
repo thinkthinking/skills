@@ -18,6 +18,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { formatMarkdown } from "./_md.ts";
+import { ensureVibeGitignoreFrom } from "./_context.ts";
 
 // 章节序号 -> 展示名（仅用于目录/缺失提示；正文标题以文件内容为准）
 const CHAPTER_NAMES: Record<string, string> = {
@@ -145,6 +146,9 @@ function main(): void {
   const args = parseArgs(process.argv.slice(2));
   const src = path.resolve(expandHome(args.src));
   if (!fs.existsSync(src) || !fs.statSync(src).isDirectory()) die(`目录不存在：${src}`);
+
+  // 若 src 位于 .context/vibe-product-design 产出树内，确保根下有 .gitignore（缺失才写）。
+  ensureVibeGitignoreFrom(src);
 
   const lintOn = !args.noLint;
   let lintAvailable = true;
