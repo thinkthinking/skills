@@ -171,6 +171,8 @@ function minimalYamlLoad(text: string): YamlNode {
 }
 
 interface Config {
+  platform?: string;
+  platforms?: Record<string, { label?: string; size?: string }>;
   active_theme?: string;
   themes?: Record<string, string>;
   rendering?: Record<string, unknown>;
@@ -210,8 +212,33 @@ function styleFilePath(configDir: string, themeSlug: string): string {
   return path.join(configDir, "generated", `${themeSlug}.style.md`);
 }
 
+/**
+ * 解析目标平台（强约束）：所有页面级原型图的尺寸与界面形态都按它出。
+ * platform 必须命中 platforms: 里的一个 key；解析结果并入 rendering 返回。
+ */
+function resolvePlatform(config: Config): { key: string; label: string; size: string } {
+  const platforms = config.platforms ?? {};
+  const key = (config.platform ?? "").trim();
+  if (!key) die("配置里没有 platform（目标平台）。请在 prototype-style.yaml 里选一个 platforms: 下的 key（如 web / mobile / tablet）。");
+  const entry = platforms[key];
+  if (!entry || typeof entry === "string" || !entry.size) {
+    const known = Object.keys(platforms).join(" / ") || "（空）";
+    die(`platform: ${key} 未在 platforms: 里定义（或缺少 size）。可选值：${known}`);
+  }
+  return { key, label: String(entry.label ?? key), size: String(entry.size) };
+}
+
 function getRendering(config: Config): Record<string, unknown> {
-  return { ...(config.rendering ?? {}) };
+  const platform = resolvePlatform(config);
+  return {
+    ...(config.rendering ?? {}),
+    // 尺寸由 platform 决定（强约束）：页面级原型图一律用它，不要按图自选尺寸。
+    size: platform.size,
+    platform: platform.key,
+    platform_label: platform.label,
+    size_note:
+      "页面级原型图一律用此 size / 界面形态（强约束，由配置 platform 决定）；仅组件/局部特写可临时用其它尺寸（如 1024x1024）。",
+  };
 }
 
 // ------------------------- 预处理任务书 -------------------------

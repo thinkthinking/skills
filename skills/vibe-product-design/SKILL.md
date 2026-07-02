@@ -4,7 +4,7 @@ description: >-
   把一个产品想法或需求变成一份清晰、可直接交付的 PRD 文档——支持两种规模。用户带着需求来时，你先
   理解需求本质，再判断是「模式 A · 全量产品设计」（从 0 到 1，六章工作流：产品概述、需求分析、
   商业画布、用户旅程、业务流程、功能设计，适合全新产品/全新方向）还是「模式 B · 功能模块 PRD」
-  （基于已有产品，只为一个功能点写清楚设计/逻辑/边界，配 config 驱动风格的高保真原型图（默认原研哉），适合日常迭代），并用问卷向
+  （基于已有产品，只为一个功能点写清楚设计/逻辑/边界，配 config 驱动风格的高保真原型图（默认苹果设计风格），适合日常迭代），并用问卷向
   用户确认后再动笔。每当用户带着产品想法、初步需求、想写/完善 PRD、做产品规划、要新增或改造一个
   功能模块时触发——例如提到：产品想法、原始需求、需求文档、PRD、产品规划、产品设计、梳理产品、
   写个 PRD、功能清单、商业模式、精益画布、lean canvas、竞品分析、用户画像、用户旅程、业务流程图、
@@ -61,9 +61,10 @@ metadata:
 ```text
 <skill-dir>/
 ├── config/                           # 配置「模板」——首次运行复制到 .context，之后不再读这里
-│   ├── prototype-style.yaml          # 原型图风格配置：用户写一句话主题 active_theme（默认原研哉）
+│   ├── prototype-style.yaml          # 原型图配置：目标平台 platform（默认 web/PC 2K，强约束尺寸）
+│   │                                 #   + 一句话风格主题 active_theme（默认苹果设计风格）
 │   └── generated/
-│       └── kenya-hara.style.md       # 默认主题预生成的风格提示词（开箱即用）
+│       └── apple.style.md            # 默认主题预生成的风格提示词（开箱即用）
 └── scripts/                          # TypeScript，用 `npx --yes tsx <脚本>` 运行（需本机有 Node/npx）
     ├── style_prompt.ts               # 风格「预处理 + 加载」协调器（plan / load / params）
     ├── merge_prd.ts                  # 模式 A 合并 + 规范化
@@ -134,7 +135,7 @@ mkdir -p <project-dir>/.context/vibe-product-design/<功能 slug>/assets
    哪一种（例如直接说"帮我做个功能模块 PRD"或"我要从 0 开始梳理这个新产品"）。问法示例：
 
    - **选项 A（模式 B · 功能模块 PRD，多数场景推荐）：** 基于已有产品，只为这一个功能点写清楚
-     设计、逻辑、边界，配高保真原型图（风格由配置驱动，默认原研哉），写得快、够聚焦，适合日常迭代/新增功能。
+     设计、逻辑、边界，配高保真原型图（平台与风格由配置驱动，默认 PC 端 2K ＋ 苹果设计风格），写得快、够聚焦，适合日常迭代/新增功能。
    - **选项 B（模式 A · 全量产品设计）：** 从 0 到 1 做完整分析——需求分析、商业画布、用户旅程、
      业务流程、功能设计六章全套，适合全新产品或全新方向，工作量更大。
 
@@ -335,7 +336,7 @@ npx --yes tsx <skill-dir>/scripts/merge_prd.ts <project-dir>/.context/vibe-produ
 <project-dir>/.context/vibe-product-design/
 └── <功能名 slug>/     # 每个功能各占一个文件夹，直接放在产出根下（与模式 A 的产品文件夹平级）
     ├── PRD.md          # 单文档交付物
-    └── assets/         # 高保真原型图（风格由 config 驱动，默认原研哉），PRD.md 用相对路径 assets/xxx.png 引用
+    └── assets/         # 高保真原型图（平台/风格由 config 驱动，默认 PC 2K ＋ 苹果风），PRD.md 用相对路径 assets/xxx.png 引用
 ```
 
 - `<功能名 slug>` 从功能名提炼一个简短目录名（去空格/特殊符号），如给已有耳机 App 加"降噪模式
@@ -383,11 +384,12 @@ npx --yes tsx <skill-dir>/scripts/merge_prd.ts <project-dir>/.context/vibe-produ
 4. **依据初稿确定原型图清单**：初稿里第 4.1 节和第 5 章已经把状态、流程分支、异常情况写清楚了——
    基于这些反推需要画哪几张图（覆盖主流程关键节点 + 关键异常/空状态），一次性列给用户确认，而不是
    凌空想象要画什么。若某张图的画面细节初稿里没讲清楚、也推不出来，同样先问用户。
-5. **生成高保真原型图（风格由配置驱动）**：按 `references/功能模块PRD.md` 的「原型图生成规范」
+5. **生成高保真原型图（平台与风格由配置驱动）**：按 `references/功能模块PRD.md` 的「原型图生成规范」
    一节执行——这是一条 **config 驱动**的流水线：
-   - **风格不写死**：先跑 `style_prompt.ts plan`（带 `--project-dir`）。首次运行它会把 skill 的
-     配置模板复制到 `<project-dir>/.context/vibe-product-design/config/`（升级不覆盖），并读取其中
-     `prototype-style.yaml` 的 `active_theme`（用户写的一句话主题，默认原研哉）。
+   - **平台与风格都不写死**：先跑 `style_prompt.ts plan`（带 `--project-dir`）。首次运行它会把
+     skill 的配置模板复制到 `<project-dir>/.context/vibe-product-design/config/`（升级不覆盖），并
+     读取其中 `prototype-style.yaml` 的 `platform`（目标平台，默认 web/PC 2K）和 `active_theme`
+     （用户写的一句话风格主题，默认苹果设计风格）。
 
      ```bash
      npx --yes tsx <skill-dir>/scripts/style_prompt.ts plan --project-dir <project-dir>
@@ -397,7 +399,9 @@ npx --yes tsx <skill-dir>/scripts/merge_prd.ts <project-dir>/.context/vibe-produ
      `brief` 把这句主题**用大模型展开**成一段风格提示词，写入 `brief` 指定的 `style_file`
      （`.context/.../config/generated/<slug>.style.md`，一次性预处理，之后命中缓存），再 `load` 取回。
    - **逐图出图**：每张图 prompt = 风格提示词前缀 ＋ 本图具体画面；检查/安装 `zenmux-image-generation`，
-     按第 4 步确认过的清单出图，出图参数用配置里的 `rendering`。
+     按第 4 步确认过的清单出图，出图参数用 `plan`/`load` 返回的 `rendering`。**其中 `size` 由配置的
+     `platform` 决定，是强约束**：所有页面级原型图一律按该平台的分辨率与界面形态出，不要按图自选
+     尺寸、更不要混出别的端的图；仅组件/局部特写这类非页面级配图可临时用其它尺寸（如 1024x1024）。
    - 产出的是能**展现关键设计决策**的高保真界面稿（真实文案、按状态各出一张），不是灰框线框图。
      生成时**显式指定输出目录**到本功能的 `assets/` 子目录，**不要用该 skill 自己的默认输出路径**，
      也不要用它默认的 4 变体（每个界面/状态 1 张，关键主界面拿不准方向时给 2 张对比即可）。
@@ -510,6 +514,9 @@ Mermaid 或 Markdown 表格，不要画 SVG。** 功能编码上，模式 A 用�
 - 不要把原型图风格写死或凭记忆瞎编——风格由 `.context` 下 `prototype-style.yaml` 的 `active_theme`
   驱动，出图前先跑 `style_prompt.ts plan --project-dir <项目根>` 拿到（或按 `brief` 预处理生成）
   对应的风格提示词。
+- 不要违背配置的目标平台——`prototype-style.yaml` 的 `platform`（默认 web/PC 2K）是强约束：页面级
+  原型图的分辨率、画幅、界面形态（布局范式/导航结构）一律按它出，不要按图自选尺寸、不要混出别的端
+  的图；仅组件/局部特写可临时用其它尺寸。用户要换端就改配置里的 `platform`，不是在单次产出里切换。
 - 不要让用户手填一堆配色/字体/留白细节——用户只写一句话主题，细节由预处理用大模型展开成风格
   提示词文件并缓存复用。
 - 不要产出灰框占位 / 手绘线框图——始终是高保真、含真实文案、能展现关键设计决策的界面稿；

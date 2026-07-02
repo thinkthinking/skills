@@ -2,7 +2,7 @@
 
 > **产出文件：** `.context/vibe-product-design/<功能名 slug>/PRD.md`（单文档，不拆章、不需要合并脚本）
 > **输入：** 已有产品背景（若存在模式 A 的 `PRD.md`/分章文件，直接读取引用） + 轻量问卷澄清结论 +
-> 高保真原型图（原研哉 / 无印良品风格，存于同目录 `assets/`）。
+> 高保真原型图（平台与风格由配置驱动，默认 PC 端 2K ＋ 苹果设计风格，存于同目录 `assets/`）。
 > **作用：** 让团队里的每个角色，拿着**这一份文档**就能各自开工——不需要再追问你、不需要再开会对齐。
 > **写作节奏（PRD ⇄ 原型图 的螺旋迭代）：** 先写初稿把业务逻辑想清楚（4.2 原型图先留空）→ 依初稿
 > 确定图单 → 出图 → **图文互检**（攒「设计发现清单」：漏了什么/想错什么/新灵感/图文不一致 →
@@ -92,9 +92,9 @@
 ### 4.1 关键交互流程说明
 按状态/步骤描述用户怎么操作、界面怎么响应。每个关键界面/状态对应下面 4.2 的一张高保真原型图。
 
-### 4.2 高保真原型图（原研哉 / 无印良品风格）
-（原型图存于同目录 `assets/`，用相对路径引用；每张图配图注。图片生成规范见下方
-「原型图生成规范」一节）
+### 4.2 高保真原型图
+（原型图存于同目录 `assets/`，用相对路径引用；平台与风格按 config 配置（默认 PC 端 2K ＋ 苹果
+设计风格）；每张图配图注。图片生成规范见下方「原型图生成规范」一节）
 
 #### 图 1 · <界面/状态名称>
 ![<界面/状态名称>](assets/<文件名>.png)
@@ -175,22 +175,28 @@
 （可选）灰度策略、发布顺序、回滚方案、上线检查清单。
 ```
 
-## 原型图生成规范（config 驱动风格 · 用 `zenmux-image-generation` 出高保真界面稿）
+## 原型图生成规范（config 驱动平台与风格 · 用 `zenmux-image-generation` 出高保真界面稿）
 
 产出的是**高保真界面稿**，把每个关键界面最重要的设计决策展现出来——不是灰框线框图。
 
-**风格不写死在这份文档里，而是由配置驱动**：用户只写**一句话主题**（`active_theme`，默认原研哉），
-skill 通过一步**预处理**把这句主题用大模型展开成一份可复用的「风格提示词文件」并缓存，出图时
-**加载**这段风格提示词、拼在每张图的具体画面描述之前。用户不需要手填配色/字体/留白等一堆细节。
+**平台与风格都不写死在这份文档里，而是由配置驱动**。用户只填两个字段：
+
+- **`platform`（目标平台，强约束）**：只选一个（默认 `web`，即 PC 端 2K）。本功能**所有页面级
+  原型图**的分辨率（`size`）、画幅与界面形态（布局范式、导航结构、信息密度）一律按这个平台出——
+  配置了 PC 端，就全部出 PC 端的图，不要有的图画成手机端；仅组件/局部特写这类非页面级配图可临时
+  用其它尺寸（如 1024x1024 方形），风格仍须一致。
+- **`active_theme`（风格主题）**：一句话（默认苹果设计风格）。skill 通过一步**预处理**把这句主题
+  用大模型展开成一份可复用的「风格提示词文件」并缓存，出图时**加载**这段风格提示词、拼在每张图的
+  具体画面描述之前。用户不需要手填配色/字体/留白等一堆细节。
 
 **配置存放在用户项目的 `.context` 下，不在 skill 目录里**——`style_prompt.ts` 首次运行会把 skill
 的配置模板复制到 `<project-dir>/.context/vibe-product-design/config/`（只在缺失时复制，不覆盖用户
 改动），之后读写都在这里，这样 skill 升级覆盖自己的文件时不会清掉用户配置与缓存。
 
 ```text
-active_theme（用户在 .context 下 prototype-style.yaml 里写的一句话主题）
+prototype-style.yaml（.context 下）：platform（目标平台）＋ active_theme（一句话风格主题）
   → 预处理：style_prompt.ts plan → 若无缓存，按 brief 用大模型展开成 .context/.../generated/<slug>.style.md
-  → 加载：style_prompt.ts load → 取出风格提示词前缀
+  → 加载：style_prompt.ts load → 取出风格提示词前缀 ＋ rendering（model/quality/size，size 已按 platform 定死）
   → 每张图 prompt = 风格提示词前缀 + 本图具体画面 → 交给 zenmux-image-generation 出图
 ```
 
@@ -203,11 +209,11 @@ active_theme（用户在 .context 下 prototype-style.yaml 里写的一句话主
 次数。哪张图该画什么、该突出什么状态，都应该能从初稿内容里直接推导出来，不是凌空另起一套画面清单；
 初稿里没讲清楚、也推不出来的细节，先照 `澄清问卷.md` 的方法问用户。
 
-### 第 1 步 · 加载风格（预处理 + 缓存）
+### 第 1 步 · 加载平台与风格（预处理 + 缓存）
 
 先跑 `plan`（带 `--project-dir`，指向用户项目根）。首次运行它会把 skill 的配置模板复制到
-`<project-dir>/.context/vibe-product-design/config/`，再解析当前主题、检查缓存，告诉你风格提示词
-是否已就绪：
+`<project-dir>/.context/vibe-product-design/config/`，再解析目标平台与当前主题、检查缓存，告诉你
+风格提示词是否已就绪：
 
 ```bash
 npx --yes tsx <skill-dir>/scripts/style_prompt.ts plan --project-dir <project-dir>
@@ -215,8 +221,9 @@ npx --yes tsx <skill-dir>/scripts/style_prompt.ts plan --project-dir <project-di
 
 看返回 JSON 的 `status`：
 
-- **`status: ready`** → 已有缓存的风格提示词（默认的 `kenya-hara` 开箱即带，直接就绪）。
-  `prompt_prefix` 就是要拼在每张图前面的风格前缀，`rendering` 是出图参数。直接进第 2 步。
+- **`status: ready`** → 已有缓存的风格提示词（默认的 `apple` 开箱即带，直接就绪）。
+  `prompt_prefix` 就是要拼在每张图前面的风格前缀，`rendering` 是出图参数（其中 `size` 已按配置的
+  `platform` 定死）。直接进第 2 步。
 - **`status: need_generation`** → 该主题还没展开过（用户换了新主题）。返回里的 `brief` 是一份
   **展开任务书**：按它把这句主题**用大模型展开成一段风格提示词**（配色/字体/留白/组件/氛围/规避，
   并内化通用质量底线），写入 `brief` 指定的 `style_file`（即 `.context/.../config/generated/<slug>.style.md`）。
@@ -228,16 +235,20 @@ npx --yes tsx <skill-dir>/scripts/style_prompt.ts plan --project-dir <project-di
 
 > 换风格：让用户改 `.context/vibe-product-design/config/prototype-style.yaml` 的 `active_theme`
 > ——写成 `themes:` 里的某个 key，或直接写一句自由主题文本（如"赛博朋克霓虹，暗色高对比"）。改完重跑
-> `plan` 即按新主题展开。想强制重新展开（改了主题描述但 slug 没变时）加 `--force`。改
+> `plan` 即按新主题展开。想强制重新展开（改了主题描述但 slug 没变时）加 `--force`。
+> 换端：改同一文件的 `platform`（`platforms:` 里的某个 key，如 `web` / `mobile` / `tablet`）——
+> 这是项目级设置，改完对后续所有页面级原型图生效；不要在单次产出里私自切换平台。改
 > `<skill-dir>/config/` 里的模板没用——运行时以 `.context` 下的副本为准。零第三方依赖：脚本内置极简
 > YAML 解析器，`npx` 会按需拉起 tsx，开箱即用。
 
 ### 第 2 步 · 逐图拼 prompt 并出图
 
 **每张图的 prompt = 第 1 步拿到的 `prompt_prefix`（风格提示词）＋ 本图的具体画面描述。**
-风格由前缀统一保证；你只需为每张图写清楚**具体画面**：
+风格由前缀统一保证；画幅/设备**统一按配置的 `platform` 写**（`rendering.platform_label` 就是它的
+可读名，如"PC / 桌面 Web（横版 2K）"），不要逐图另选设备。你只需为每张图写清楚**具体画面**：
 
-> <画幅/设备：如"竖版手机界面"或"桌面 Web 界面">。画面：<具体页面/状态名、关键区域与控件，
+> <画幅/设备：按配置平台写，如"桌面 Web 界面"（platform: web）或"竖版手机界面"（platform: mobile）>。
+> 画面：<具体页面/状态名、关键区域与控件，
 > 以及**此刻要突出的关键设计与交互状态**——例如"耳机 App 的降噪设置页：顶部返回箭头与标题
 > '降噪模式'，主体是三张竖向排列的选择卡片'关闭 / 通透 / 强降噪'，当前选中'强降噪'卡片用细边框
 > 加一枚小圆点标示选中态，卡片下方一行小字标注对应续航影响，页面底部留大量余白">
@@ -249,9 +260,11 @@ npx --yes tsx <skill-dir>/scripts/style_prompt.ts plan --project-dir <project-di
 
 **出图参数**用第 1 步 `plan`/`load` 返回里的 `rendering`（来自 `config/prototype-style.yaml`，
 所有主题通用，可在配置里改）：`model`（默认 `openai/gpt-image-2`，文字渲染稳、支持自定义尺寸，别用
-fast/low 档以免糊字错字）、`quality`（默认 `high`，密集中文必须 high）、`size`（按界面形态选：手机
-`mobile` = 1024x1536、Web `web` = 2560x1440（2K）、方形 `square` = 1024x1024，别用默认方形硬套
-手机页）。具体调用方式、参数含义以 `zenmux-image-generation` 自己的 `SKILL.md` 为准。
+fast/low 档以免糊字错字）、`quality`（默认 `high`，密集中文必须 high）、`size`（**已由配置的
+`platform` 定死**，如 `web` = 2560x1440（PC 2K）、`mobile` = 1024x1536、`tablet` = 2048x1536）。
+**`size` 是强约束**：所有页面级原型图一律用它，不要按图自选尺寸；仅组件/局部特写这类非页面级配图
+可临时用其它尺寸（如 1024x1024 方形），风格与平台语境仍须一致。具体调用方式、参数含义以
+`zenmux-image-generation` 自己的 `SKILL.md` 为准。
 
 ### 第 3 步 · 输出路径与数量
 
