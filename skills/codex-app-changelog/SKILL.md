@@ -241,8 +241,8 @@ Changelog-specific handoff brief:
 - Handoff requirement: after drafting the 4 style briefs, hand them to `$zenmux-image-generation` and let that skill optimize each prompt using its current OpenAI and Gemini cookbooks, confirmation rules, API commands, and troubleshooting. This changelog skill should not hand-write final API prompts when `$zenmux-image-generation` can optimize them.
 - Batch requirement: generate 8 total images: 4 sampled styles x 2 model/protocol variants. For each style, run one `gpt-image-2` OpenAI edit batch with `-n 1`, then one Gemini edit batch with `-n 1`, using distinct output folders such as `<style-slug>/openai-gpt-image-2/` and `<style-slug>/gemini-3.1-flash-image/`. Do not merge styles or models into a grid.
 - Output preference: save or place final cover assets under `<project-dir>/.context/codex-app-changelog/assets/covers/<version>/<style-slug>/<model-slug>/` when bundling the rednote assets.
-- **Post-process required — stamp a black metadata footer on every generated cover** (see below). Do this after each successful generation batch (or after all 8 images exist), before reporting paths.
-- After generation + footer stamping: report the stamped output paths only. Do not rank, select, or recommend a final 图1 unless the user explicitly asks.
+- **Post-process required — stamp a black metadata footer on every generated cover** (see below). Choose exactly one strategy for the run: process returned source paths after each successful batch (recommended), or process each source directory once after all 8 images exist. Never combine both strategies for the same files.
+- After generation + footer stamping: report the stamped `*-footer` output paths only, not the preserved source paths. Do not rank, select, or recommend a final 图1 unless the user explicitly asks.
 - Avoid: emoji, fake app screenshots, stock-photo people, malformed words, watermarks, invented logos, bland gradient backgrounds, busy small text, and multi-variant grids inside a single image.
 
 #### Stamp cover footer (required after generation)
@@ -263,10 +263,10 @@ How to obtain each value:
 2. **提示词模型 (prompt model)** — the model id of **this** interactive session that authored the optimized prompt for `$zenmux-image-generation`. Use the exact model name shown for the current session (slash `/model`, status line, or the host-reported model). Pass it with `--prompt-model`. Do **not** put the image model here.
 3. **生成日期** — pass `--date YYYY-MM-DD` when you know it; otherwise the script uses the `YYYYMMDD` stamp in zenmux filenames (e.g. `...-20260709-144019-01.png` → `2026-07-09`), then falls back to today's local date.
 
-Run the bundled script **once per generated cover**, in-place (default overwrites the PNG so rednote 图1 is the stamped version):
+Run the bundled script **once per generated source cover**. It preserves the original and writes `<name>-footer.<ext>` alongside it. Re-running the command safely rebuilds that same output from the unchanged source instead of stacking another footer:
 
 ```bash
-# Single cover
+# Single source cover -> <name>-footer.png
 npx --yes tsx <skill-dir>/scripts/stamp_cover_footer.ts \
   --input <path-to-generated-cover.png> \
   --image-model "openai/gpt-image-2" \
@@ -280,7 +280,7 @@ npx --yes tsx <skill-dir>/scripts/stamp_cover_footer.ts \
   --prompt-model "<current-session-model-id>"
 ```
 
-Repeat for each style × model folder (8 images total). Optional `--suffix -footer` writes alongside instead of overwriting; optional `--output` is for a single explicit destination.
+Repeat for each style × model folder (8 source images total). The default suffix is `-footer`; `--suffix` may change it, and `--output` is for one explicit destination. `--input-dir` ignores files already ending in the selected suffix, so reruns do not treat derived outputs as new sources. In-place output is intentionally unsupported.
 
 Requires the same Playwright Chromium setup as `render_changelog.ts` (`npx --yes playwright install chromium` once).
 

@@ -7,21 +7,22 @@
  *   - prompt model (提示词模型)
  *   - generation date (生成日期)
  *
- * Pure post-process — does not re-run image generation.
+ * Pure post-process — does not re-run image generation. The source image is
+ * preserved and the stamped cover is written alongside it by default.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
-interface Args {
+export interface Args {
   inputs: string[];
   inputDir: string | null;
   output: string | null;
   imageModel: string | null;
   promptModel: string | null;
   date: string | null;
-  inPlace: boolean;
   suffix: string;
 }
 
@@ -64,7 +65,7 @@ function inferDateFromPath(filePath: string): string | null {
   return `${match[1]}-${match[2]}-${match[3]}`;
 }
 
-function parseArgs(argv: string[]): Args {
+export function parseArgs(argv: string[]): Args {
   const args: Args = {
     inputs: [],
     inputDir: null,
@@ -72,8 +73,7 @@ function parseArgs(argv: string[]): Args {
     imageModel: null,
     promptModel: null,
     date: null,
-    inPlace: true,
-    suffix: "",
+    suffix: "-footer",
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -86,7 +86,6 @@ function parseArgs(argv: string[]): Args {
       args.inputDir = next();
     } else if (arg === "--output" || arg === "-o") {
       args.output = next();
-      args.inPlace = false;
     } else if (arg === "--image-model") {
       args.imageModel = next();
     } else if (arg === "--prompt-model") {
@@ -95,26 +94,28 @@ function parseArgs(argv: string[]): Args {
       args.date = next();
     } else if (arg === "--suffix") {
       args.suffix = next();
-      args.inPlace = false;
     } else if (arg === "--in-place") {
-      args.inPlace = true;
-      args.output = null;
+      throw new Error(
+        "--in-place is no longer supported because repeated runs append duplicate footers; use the default -footer output or --output",
+      );
     } else if (arg === "--help" || arg === "-h") {
       process.stdout.write(`Usage:
   stamp_cover_footer.ts --input COVER.png --prompt-model <id> [--image-model <id>] [--date YYYY-MM-DD]
   stamp_cover_footer.ts --input-dir DIR --prompt-model <id> [--image-model <id>]
 
 Append a black footer bar under each cover with image model / prompt model / date.
+The source image is preserved; the default output is <name>-footer.<ext>.
+Directory scans ignore files already ending in the selected suffix.
 
 Options:
-  --input, -i PATH       Cover PNG/JPEG/WebP (repeatable)
-  --input-dir DIR        Stamp every image file under DIR (non-recursive)
+  --input, -i PATH       Source cover PNG/JPEG/WebP (repeatable)
+  --input-dir DIR        Stamp every source image under DIR (non-recursive)
   --image-model ID       e.g. openai/gpt-image-2 (inferred from path if omitted)
   --prompt-model ID      e.g. claude-opus-4-8 / grok-4.5  (required)
   --date YYYY-MM-DD      Generation date (default: today local, or filename timestamp)
-  --output, -o PATH      Write to PATH (single --input only); default is in-place
-  --suffix STR           Write alongside as <name><suffix>.<ext> (e.g. -footer)
-  --in-place             Overwrite each input (default)
+  --output, -o PATH      Write to PATH (single --input only; must differ from input)
+  --suffix STR           Output suffix (default: -footer)
+  --in-place             Unsupported: preserving the source prevents duplicate footers
 `);
       process.exit(0);
     } else {
@@ -127,18 +128,33 @@ Options:
       "--prompt-model is required (pass the current session model that wrote the image prompt, e.g. claude-opus-4-8 or grok-4.5)",
     );
   }
+  if (!args.suffix && !args.output) {
+    throw new Error("--suffix must be non-empty unless --output is provided");
+  }
 
   return args;
 }
 
-function collectInputs(args: Args): string[] {
-  const files: string[] = [];
+function hasSuffix(filePath: string, suffix: string): boolean {
+  if (!suffix) return false;
+  const ext = path.extname(filePath);
+  const base = ext ? filePath.slice(0, -ext.length) : filePath;
+  return base.endsWith(suffix);
+}
+
+export function collectInputs(args: Args): string[] {
+  const files = new Set<string>();
   for (const raw of args.inputs) {
     const p = path.resolve(expandHome(raw));
     if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
       throw new Error(`input file not found: ${p}`);
     }
-    files.push(p);
+    if (hasSuffix(p, args.suffix)) {
+      throw new Error(
+        `input already has the output suffix ${JSON.stringify(args.suffix)}: ${p}; use the original source image`,
+      );
+    }
+    files.add(p);
   }
   if (args.inputDir) {
     const dir = path.resolve(expandHome(args.inputDir));
@@ -147,26 +163,59 @@ function collectInputs(args: Args): string[] {
     }
     for (const name of fs.readdirSync(dir).sort()) {
       if (!/\.(png|jpe?g|webp)$/i.test(name)) continue;
-      files.push(path.join(dir, name));
+      const inputPath = path.join(dir, name);
+      if (hasSuffix(inputPath, args.suffix)) continue;
+      files.add(inputPath);
     }
   }
-  if (files.length === 0) {
-    throw new Error("provide --input and/or --input-dir with at least one image");
+  const inputs = [...files];
+  if (inputs.length === 0) {
+    throw new Error("provide --input and/or --input-dir with at least one source image");
   }
-  if (args.output && files.length !== 1) {
-    throw new Error("--output can only be used with a single --input");
+  if (args.output && inputs.length !== 1) {
+    throw new Error("--output can only be used with one unique input");
   }
-  return files;
+  return inputs;
 }
 
-function resolveOutputPath(inputPath: string, args: Args): string {
+export function resolveOutputPath(inputPath: string, args: Args): string {
   if (args.output) return path.resolve(expandHome(args.output));
-  if (args.suffix) {
-    const ext = path.extname(inputPath);
-    const base = inputPath.slice(0, -ext.length);
-    return `${base}${args.suffix}${ext}`;
+  const ext = path.extname(inputPath);
+  const base = inputPath.slice(0, -ext.length);
+  return `${base}${args.suffix}${ext}`;
+}
+
+function canonicalExistingPath(filePath: string): string {
+  const resolved = fs.existsSync(filePath) ? fs.realpathSync(filePath) : path.resolve(filePath);
+  return process.platform === "win32" || process.platform === "darwin"
+    ? resolved.toLowerCase()
+    : resolved;
+}
+
+function pathsReferToSameFile(first: string, second: string): boolean {
+  if (canonicalExistingPath(first) === canonicalExistingPath(second)) return true;
+  if (!fs.existsSync(first) || !fs.existsSync(second)) return false;
+  const firstStat = fs.statSync(first);
+  const secondStat = fs.statSync(second);
+  return firstStat.dev === secondStat.dev && firstStat.ino === secondStat.ino;
+}
+
+export function assertSafeOutputs(inputs: string[], args: Args): void {
+  const outputOwners = new Map<string, string>();
+  for (const inputPath of inputs) {
+    const outputPath = resolveOutputPath(inputPath, args);
+    if (pathsReferToSameFile(outputPath, inputPath)) {
+      throw new Error(
+        `refusing to overwrite source image ${inputPath}; use the default -footer suffix or a different --output path`,
+      );
+    }
+    const outputKey = canonicalExistingPath(outputPath);
+    const owner = outputOwners.get(outputKey);
+    if (owner && owner !== inputPath) {
+      throw new Error(`multiple inputs resolve to the same output: ${outputPath}`);
+    }
+    outputOwners.set(outputKey, inputPath);
   }
-  return inputPath;
 }
 
 function escapeHtml(text: string): string {
@@ -327,8 +376,7 @@ function stampOne(
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "stamp-cover-footer-"));
   const htmlPath = path.join(tmpDir, "stamp.html");
-  // Write to a sibling temp file first when overwriting, then rename — avoids
-  // reading a partially-written destination if playwright fails mid-way.
+  // Render to a temporary file first so a failed run cannot leave a partial output.
   const tmpOut = path.join(tmpDir, `out${path.extname(outputPath) || ".png"}`);
   fs.writeFileSync(htmlPath, html, "utf8");
 
@@ -355,13 +403,23 @@ function stampOne(
     );
   }
 
-  fs.copyFileSync(tmpOut, outputPath);
-  fs.rmSync(tmpDir, { recursive: true, force: true });
+  const stagedOutput = path.join(
+    path.dirname(outputPath),
+    `.${path.basename(outputPath)}.${process.pid}.tmp`,
+  );
+  try {
+    fs.copyFileSync(tmpOut, stagedOutput);
+    fs.renameSync(stagedOutput, outputPath);
+  } finally {
+    fs.rmSync(stagedOutput, { force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 }
 
 function main(): number {
   const args = parseArgs(process.argv.slice(2));
   const inputs = collectInputs(args);
+  assertSafeOutputs(inputs, args);
   const promptModel = args.promptModel!.trim();
   if (!promptModel) throw new Error("--prompt-model must be non-empty");
 
@@ -388,9 +446,15 @@ function main(): number {
   return 0;
 }
 
-try {
-  process.exit(main());
-} catch (error) {
-  process.stderr.write(`ERROR: ${error instanceof Error ? error.message : String(error)}\n`);
-  process.exit(2);
+const isEntryPoint = process.argv[1]
+  ? import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+  : false;
+
+if (isEntryPoint) {
+  try {
+    process.exit(main());
+  } catch (error) {
+    process.stderr.write(`ERROR: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(2);
+  }
 }
