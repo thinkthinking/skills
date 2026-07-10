@@ -5,8 +5,8 @@
     "url": "https://github.com/thinkthinking"
   },
   "metadata": {
-    "description": "thinkthinking skills — changelog toolkit (fetch, translate, render Claude Code / Codex CLI / Codex App release notes) and vibe-creation (human-led AI co-writing companion)",
-    "version": "1.0.0"
+    "description": "thinkthinking skills — changelog workflows, platform-ready cover image generation, and human-led vibe creation",
+    "version": "1.1.0"
   },
   "plugins": [
     {
@@ -18,6 +18,15 @@
         "./skills/claudecode-cli-changelog",
         "./skills/codex-cli-changelog",
         "./skills/codex-app-changelog"
+      ]
+    },
+    {
+      "name": "visual-creation",
+      "description": "Generate platform-ready social covers, headers, thumbnails, and banners with selectable aspect ratios, safe-area-aware composition, exact delivery canvases, and black model-metadata footer copies",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/cover-image-generation"
       ]
     },
     {

@@ -37,6 +37,22 @@ See each `SKILL.md` for the full workflow, flags, and output layout.
 > The optional cover-image step depends on the separate `zenmux-image-generation` skill:
 > `npx skills add ZenMux/skills --skill zenmux-image-generation`
 
+### Visual creation
+
+Platform-ready image workflows with explicit ratio, safe-area, provenance, and
+delivery rules.
+
+| Skill | Use case |
+| --- | --- |
+| [`cover-image-generation`](./skills/cover-image-generation/SKILL.md) | Creates social covers, headers, thumbnails, and banners across common platform ratios; defaults to 3:4 and `openai/gpt-image-2`, preserves exact-ratio clean files, and adds separate black model-metadata footer copies |
+
+`cover-image-generation` composes the separate `zenmux-image-generation` skill
+for prompt optimization and image API calls:
+
+```bash
+npx skills add ZenMux/skills --skill zenmux-image-generation
+```
+
 ### Vibe creation
 
 Human-led workflows that keep the human in charge while the agent acts as a

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cover Image Generation"
+  short_description: "Generate platform-ready social cover images"
+  default_prompt: "Use $cover-image-generation to create a 3:4 social cover with platform-safe composition."
