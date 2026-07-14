@@ -5,8 +5,8 @@
     "url": "https://github.com/thinkthinking"
   },
   "metadata": {
-    "description": "thinkthinking skills — changelog workflows, platform-ready cover image generation, and human-led vibe creation",
-    "version": "1.1.0"
+    "description": "thinkthinking skills — changelog workflows, social-content analytics, platform-ready cover image generation, and human-led vibe creation",
+    "version": "1.2.0"
   },
   "plugins": [
     {
@@ -27,6 +27,15 @@
       "strict": false,
       "skills": [
         "./skills/cover-image-generation"
+      ]
+    },
+    {
+      "name": "analytics",
+      "description": "Collect and incrementally maintain Xiaohongshu/Rednote creator content analytics as project-local JSON through OpenCLI",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/rednote-content-analytics"
       ]
     },
     {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rednote Content Analytics"
+  short_description: "Track and incrementally update Rednote content metrics"
+  default_prompt: "Use $rednote-content-analytics to collect and summarize my Xiaohongshu posts and update the project-local JSON dataset."

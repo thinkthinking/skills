@@ -53,6 +53,14 @@ for prompt optimization and image API calls:
 npx skills add ZenMux/skills --skill zenmux-image-generation
 ```
 
+### Analytics
+
+Project-local, incrementally maintained datasets for social-content review.
+
+| Skill | Use case |
+| --- | --- |
+| [`rednote-content-analytics`](./skills/rednote-content-analytics/SKILL.md) | Collects a user's Xiaohongshu/Rednote posts through OpenCLI, normalizes title/link/date/views/likes/collects/comments to JSON, and incrementally updates per-user data under the consuming project's `.context` directory |
+
 ### Vibe creation
 
 Human-led workflows that keep the human in charge while the agent acts as a
